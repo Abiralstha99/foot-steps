@@ -1,34 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { MainLayout } from "@/components/layout/MainLayout"
+import { Button } from "@/components/ui/button"
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <MainLayout>
+      <div className="space-y-6 pt-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#5B5D5C]">
+            Travel Photo Journal
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+            Rediscover every journey in{" "}
+            <span className="bg-gradient-to-r from-[#EDEDED] via-[#C8D0CB] to-[#3C4741] bg-clip-text text-transparent">
+              cinematic detail
+            </span>
+            .
+          </h1>
+          <p className="max-w-xl text-sm leading-relaxed text-[#9A9C9B] sm:text-base">
+            Curate your favorite travel moments, pin them to a map, and build a
+            living archive of the stories behind every photo you capture on the
+            road.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button className="bg-[#3C4741] text-white hover:bg-[#4B5A52]">
+            Start a new trip
+          </Button>
+          <Button
+            variant="outline"
+            className="border-[#2A2A2A] bg-transparent text-[#EDEDED] hover:bg-[#1A1A1A]"
+          >
+            Browse past journeys
+          </Button>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </MainLayout>
   )
 }
 
