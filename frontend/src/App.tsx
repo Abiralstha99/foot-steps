@@ -11,7 +11,7 @@ function App() {
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
             Rediscover every journey in{" "}
-            <span className="bg-gradient-to-r from-[#EDEDED] via-[#C8D0CB] to-[#3C4741] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#54d354] via-[#C8D0CB] to-[#f5f7f6] bg-clip-text text-transparent">
               cinematic detail
             </span>
             .
@@ -24,7 +24,7 @@ function App() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button className="bg-[#3C4741] text-white hover:bg-[#4B5A52]">
+          <Button className="bg-[#023f00] text-white hover:bg-[#4B5A52]">
             Start a new trip
           </Button>
           <Button

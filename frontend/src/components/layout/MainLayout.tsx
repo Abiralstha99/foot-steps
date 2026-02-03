@@ -13,15 +13,15 @@ export function MainLayout({ children }: MainLayoutProps) {
       <Sidebar />
 
       {/* Main content area */}
-      <main className="relative flex min-h-screen flex-col md:ml-[260px]">
+      <main className="relative flex min-h-screen flex-col md:ml-[260px] px-8 py-10">
         {/* Cinematic radial gradient overlay */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(60,71,65,0.55),_transparent_65%)] opacity-80" />
 
         {/* Subtle vertical gradient base */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#070807] via-[#070807] to-black" />
 
-        <div className="relative z-10 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
-          <div className="mx-auto max-w-6xl">
+        <div className="relative z-10 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl animate-in fade-in duration-500">
             {children}
           </div>
         </div>

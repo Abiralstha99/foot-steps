@@ -1,4 +1,5 @@
 import React from "react"
+import { NavLink } from "react-router-dom"
 import {
     Compass,
     Globe2,
@@ -17,40 +18,47 @@ const SIDEBAR_WIDTH = 260
 type NavItem = {
     label: string
     icon: React.ReactNode
+    to: string
 }
 
 const mainNavItems: NavItem[] = [
-    { label: "My Trips", icon: <Map className="size-4" /> },
-    { label: "Create Trip", icon: <PlusCircle className="size-4" /> },
-    { label: "Explore", icon: <Globe2 className="size-4" /> },
+    { label: "My Trips", icon: <Map className="size-4" />, to: "/trips" },
+    { label: "Create Trip", icon: <PlusCircle className="size-4" />, to: "/trips/new" },
+    { label: "Explore", icon: <Globe2 className="size-4" />, to: "/explore" },
 ]
 
 const footerNavItems: NavItem[] = [
-    { label: "Settings", icon: <Settings className="size-4" /> },
-    { label: "Profile", icon: <User className="size-4" /> },
+    { label: "Settings", icon: <Settings className="size-4" />, to: "/settings" },
+    { label: "Profile", icon: <User className="size-4" />, to: "/profile" },
 ]
 
 function SidebarNavList({ items }: { items: NavItem[] }) {
     return (
-        <nav className="space-y-1">
+        <nav className="space-y-2">
             {items.map((item) => (
-                <button
+                <NavLink
                     key={item.label}
-                    type="button"
-                    className={cn(
-                        "group flex w-full items-center gap-3 rounded-md px-4 py-2 text-left text-sm font-medium",
-                        "text-[#9A9C9B] hover:text-white",
-                        "border-l-2 border-l-transparent hover:border-l-[#3C4741]",
-                        "hover:bg-[#1A1A1A]"
-                    )}
+                    to={item.to}
+                    className={({ isActive }: { isActive: boolean }) =>
+                        cn(
+                            "group flex w-full items-center gap-3 rounded-md px-4 py-2 text-left text-sm font-medium transition-colors no-underline",
+                            // Active State
+                            isActive
+                                ? "bg-[#1A1A1A] text-white border-l-[3px] border-l-[#3C4741]"
+                                : "text-[#9A9C9B] hover:text-[#54d354] border-l-[3px] border-l-transparent hover:border-l-[#3C4741] hover:bg-[#1A1A1A]"
+                        )
+
+                    }
+
                 >
-                    <span className="flex items-center justify-center rounded-md bg-[#181818] p-2 text-[#9A9C9B] group-hover:bg-[#222222] group-hover:text-white">
+                    <span className="flex items-center justify-center rounded-md bg-[#070807] p-2 text-inherit group-hover:bg-[#1A1A1A]">
                         {item.icon}
                     </span>
-                    <span>{item.label}</span>
-                </button>
-            ))}
-        </nav>
+                    <span className="text-inherit">{item.label}</span>
+                </NavLink>
+            ))
+            }
+        </nav >
     )
 }
 
