@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom"
 import {
     Compass,
     Globe2,
+    Home,
     Map,
     Menu,
     PlusCircle,
@@ -22,6 +23,7 @@ type NavItem = {
 }
 
 const mainNavItems: NavItem[] = [
+    { label: "Home", icon: <Home className="size-4" />, to: "/" },
     { label: "My Trips", icon: <Map className="size-4" />, to: "/trips" },
     { label: "Create Trip", icon: <PlusCircle className="size-4" />, to: "/trips/new" },
     { label: "Explore", icon: <Globe2 className="size-4" />, to: "/explore" },
