@@ -1,6 +1,8 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 import { uploadFile, getPresignedUrl } from "../services/s3.service";
+import exifr from "exifr";
+import { buffer } from "node:stream/consumers";
 
 async function getTrip(req: Request, res: Response) {
   const trips = await prisma.trip.findMany({});
@@ -127,6 +129,29 @@ async function createPhoto(req: Request, res: Response) {
 
   const file = req.file;
   const tripId = req.params.tripId;
+
+  let takenAt: Date | null = null;
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+
+  try {
+    const exif = await exifr.parse(file.buffer);
+    if (exif) {
+      if (exif.DateTimeOriginal) {
+        const d = new Date(exif.DateTimeOriginal);
+        if (!Number.isNaN(d.getTime())) takenAt = d;
+      }
+      if (exif.latitude != null && !Number.isNaN(Number(exif.latitude))) {
+        latitude = Number(exif.latitude);
+      }
+      if (exif.longitude != null && !Number.isNaN(Number(exif.longitude))) {
+        longitude = Number(exif.longitude);
+      }
+    }
+  } catch (err) {
+    console.error("EXIF parsing failed, continuing without metadata:", err);
+  }
+
   if (!tripId) {
     return res.status(404).json({ message: "No tripId found" });
   }
@@ -150,6 +175,9 @@ async function createPhoto(req: Request, res: Response) {
       id: photoId,
       tripId,
       url,
+      takenAt,
+      latitude,
+      longitude,
       aiTags: [],
     },
   });
