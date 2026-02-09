@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
+import { uploadFile, getPresignedUrl } from "../services/s3.service";
 
 async function getTrip(req: Request, res: Response) {
   const trips = await prisma.trip.findMany({});
@@ -49,9 +50,8 @@ async function createTrip(req: Request, res: Response) {
 async function getTripById(req: Request, res: Response) {
   const { id } = req.params;
   const prismaTrip = await prisma.trip.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
+    include: { photos: true },
   });
   if (!prismaTrip) {
     return res.status(404).json({ message: "Trip not found" });
@@ -116,15 +116,44 @@ async function deleteTripById(req: Request, res: Response) {
   }
 }
 
-async function createPhoto(req: Request, res:Response){
+async function createPhoto(req: Request, res: Response) {
   if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
-  }
-  const file = req.file;
-  const tripId = req.params.tripId;
-  if(!tripId){
-    return res.status(404).json({message: "No tripId found"})
+    const contentType = req.headers["content-type"] || "";
+    return res.status(400).json({
+      message: "No file uploaded",
+      hint: "Use form-data with key 'photo' and type File. Content-Type received: " + contentType,
+    });
   }
 
+  const file = req.file;
+  const tripId = req.params.tripId;
+  if (!tripId) {
+    return res.status(404).json({ message: "No tripId found" });
+  }
+
+  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+  if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+  const photoId = crypto.randomUUID();
+  const key = await uploadFile(
+    file.buffer,
+    file.mimetype,
+    trip.userId,
+    tripId,
+    photoId,
+    file.originalname
+  );
+  const url = await getPresignedUrl(key);
+
+  const photo = await prisma.photo.create({
+    data: {
+      id: photoId,
+      tripId,
+      url,
+      aiTags: [],
+    },
+  });
+
+  return res.status(201).json(photo);
 }
-export { getTrip, createTrip, getTripById, updateTripById, deleteTripById };
+export { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto };
