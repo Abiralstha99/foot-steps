@@ -115,4 +115,16 @@ async function deleteTripById(req: Request, res: Response) {
     return res.status(500).json({ message: "Failed to delete trip" });
   }
 }
+
+async function createPhoto(req: Request, res:Response){
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+  const file = req.file;
+  const tripId = req.params.tripId;
+  if(!tripId){
+    return res.status(404).json({message: "No tripId found"})
+  }
+
+}
 export { getTrip, createTrip, getTripById, updateTripById, deleteTripById };
