@@ -11,7 +11,7 @@ async function getTrip(req: Request, res: Response) {
 
 async function createTrip(req: Request, res: Response) {
   try {
-    const { userId, name, description, startDate, endDate } = req.body;
+    const { userId, name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
     //Basic validation
     if (!userId || !name || !startDate || !endDate) {
@@ -27,6 +27,7 @@ async function createTrip(req: Request, res: Response) {
         description,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
+        ...(coverPhotoUrl != null && coverPhotoUrl !== "" && { coverPhotoUrl }),
       },
     });
     return res.status(201).json(trip);
