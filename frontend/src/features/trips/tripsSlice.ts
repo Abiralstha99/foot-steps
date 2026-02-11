@@ -1,25 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
-import type { Trip } from "../types/trip"
+import type { Trip } from "./types"
 
-interface TripsState {
-    tripsList: Trip[];
-  }
-  
-  const initialState: TripsState = {
-    tripsList: []
-  };
 export const tripSlice = createSlice({
     name: "trip",
-    initialState,
+    initialState: {
+        trips: [] as Trip[],
+    },
     reducers: {
         addTrips: (state, action: PayloadAction<Trip>) => {
-            state.tripsList.push(action.payload);
+            const trip = action.payload;
+            state.trips.push(trip);
         },
 
         removeTrip: (state, action: PayloadAction<string>) => {
             const tripId = action.payload;
-            state.tripsList = state.tripsList.filter((tripsList) => tripsList.id !== tripId);
+            state.trips = state.trips.filter((trip) => trip.id !== tripId);
         },
     },
 })

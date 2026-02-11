@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { CreateTripModal } from "@/components/trips/CreateTripForm"
+import { CreateTripModal } from "@/features/trips/components/CreateTripForm"
 import { Button } from "@/components/ui/button"
 
 export function TripsPage() {
