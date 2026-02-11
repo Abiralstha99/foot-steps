@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import tripSlice from "./slice/tripSlice";
+import tripSlice from "../features/trips/tripsSlice";
 
 export const store = configureStore({
   reducer: {
