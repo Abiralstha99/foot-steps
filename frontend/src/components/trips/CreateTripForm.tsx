@@ -4,6 +4,7 @@ import { useAppDispatch } from "@/store/hooks"
 import { addTrips } from "@/store/slice/tripSlice"
 import type { Trip } from "@/store/types/trip"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/DatePicker"
 import { cn } from "@/lib/utils"
 
 type CreateTripModalProps = {
@@ -148,31 +149,26 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                         />
                     </div>
 
+                    {/* Date range inputs */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="trip-start" className="mb-1 block text-sm font-medium text-[#9A9C9B]">
                                 Start date <span className="text-red-400">*</span>
                             </label>
-                            <input
-                                id="trip-start"
-                                type="date"
-                                required
+                            <DatePicker
                                 value={form.startDate}
-                                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                                className={inputClass}
+                                onChange={(value) => setForm((f) => ({ ...f, startDate: value }))}
+                                placeholder="MM/DD/YYYY"
                             />
                         </div>
                         <div>
                             <label htmlFor="trip-end" className="mb-1 block text-sm font-medium text-[#9A9C9B]">
                                 End date <span className="text-red-400">*</span>
                             </label>
-                            <input
-                                id="trip-end"
-                                type="date"
-                                required
+                            <DatePicker
                                 value={form.endDate}
-                                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                                className={inputClass}
+                                onChange={(value) => setForm((f) => ({ ...f, endDate: value }))}
+                                placeholder="MM/DD/YYYY"
                             />
                         </div>
                     </div>
