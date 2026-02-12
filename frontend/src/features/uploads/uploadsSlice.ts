@@ -1,11 +1,14 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { UploadsState } from "@/app/types";
+import type { RootState } from "@/app/store";
+
 
 export const uploadsSlice = createSlice({
     name: "uploads",
     initialState: {
-        byId: {} as UploadsState["byId"]
+        byId: {} as UploadsState["byId"],
+        all: [] as UploadsState["all"]
     },
     reducers: {
         startUpload: (state, action: PayloadAction<{ id: string; url: string }>) => {
@@ -15,6 +18,7 @@ export const uploadsSlice = createSlice({
                 status: "idle",
                 url: url
             };
+            state.all.push(id);
         },
 
         setUploadProgress: (state, action: PayloadAction<{ id: string; progress: number }>) => {
@@ -40,9 +44,11 @@ export const uploadsSlice = createSlice({
         clearUpload: (state, action: PayloadAction<string>) => {
             const id = action.payload;
             delete state.byId[id];
+            state.all = state.all.filter(uploadId => uploadId !== id);
         },  
     }
 })
 
 export const { startUpload, setUploadProgress, setUploadStatus, setUploadError, setUploadUrl, clearUpload } = uploadsSlice.actions;
 export default uploadsSlice;
+export const selectUploadIds = (state: RootState) => state.uploads.all;

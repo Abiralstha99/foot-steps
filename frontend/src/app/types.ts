@@ -46,6 +46,7 @@ export interface UploadEntry {
 
 export type UploadsState = {
   byId: Record<string, UploadEntry>;
+  all: string[];
 };
 
 export type UploadOptions = {
