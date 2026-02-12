@@ -2,17 +2,15 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import {
     Compass,
-    Globe2,
     Home,
     Map,
     Menu,
-    PlusCircle,
     Settings,
-    User,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { CreateTripModal } from "@/features/trips/components/CreateTripForm"
 
 const SIDEBAR_WIDTH = 260
 
@@ -23,15 +21,13 @@ type NavItem = {
 }
 
 const mainNavItems: NavItem[] = [
-    { label: "Home", icon: <Home className="size-4" />, to: "/" },
+    { label: "Home", icon: <Home className="size-4" />, to: "/home" },
     { label: "My Trips", icon: <Map className="size-4" />, to: "/trips" },
-    { label: "Create Trip", icon: <PlusCircle className="size-4" />, to: "/trips/new" },
-    { label: "Explore", icon: <Globe2 className="size-4" />, to: "/explore" },
+    { label: "Explore", icon: <Compass className="size-4" />, to: "/explore" },
 ]
 
 const footerNavItems: NavItem[] = [
     { label: "Settings", icon: <Settings className="size-4" />, to: "/settings" },
-    { label: "Profile", icon: <User className="size-4" />, to: "/profile" },
 ]
 
 function SidebarNavList({ items }: { items: NavItem[] }) {
@@ -56,7 +52,14 @@ function SidebarNavList({ items }: { items: NavItem[] }) {
                     <span className="flex items-center justify-center rounded-md bg-[#070807] p-2 text-inherit group-hover:bg-[#1A1A1A]">
                         {item.icon}
                     </span>
-                    <span className="text-inherit">{item.label}</span>
+                    <span className="text-inherit">
+                        {item.label}
+                        {item.label === "Explore" && (
+                            <span className="ml-2 text-xs font-medium text-[#5B5D5C]">
+                                (Coming Soon)
+                            </span>
+                        )}
+                    </span>
                 </NavLink>
             ))
             }
@@ -66,6 +69,7 @@ function SidebarNavList({ items }: { items: NavItem[] }) {
 
 export function Sidebar() {
     const [open, setOpen] = React.useState(false)
+    const [createModalOpen, setCreateModalOpen] = React.useState(false)
 
     return (
         <>
@@ -77,7 +81,7 @@ export function Sidebar() {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-semibold tracking-tight text-white">
-                            TravelJournal
+                            foot-steps
                         </span>
                         <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9A9C9B]">
                             Capture The Journey
@@ -113,7 +117,7 @@ export function Sidebar() {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-semibold tracking-tight text-white">
-                                TravelJournal
+                                foot-steps
                             </span>
                             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9A9C9B]">
                                 Photo Stories
@@ -179,7 +183,7 @@ export function Sidebar() {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-sm font-semibold tracking-tight text-white">
-                                    TravelJournal
+                                    foot-steps
                                 </span>
                                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9A9C9B]">
                                     Photo Stories
@@ -223,7 +227,9 @@ export function Sidebar() {
                     </div>
                 </div>
             </div>
+
+            {/* Create Trip Modal */}
+            <CreateTripModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
         </>
     )
 }
-
