@@ -1,6 +1,7 @@
 import React from "react"
-import { Edit2, Image, MapPin, MoreVertical, Share2 } from "lucide-react"
+import { Edit2, Image, MapPin, Share2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu } from "@/components/ui/DropdownMenu"
 
 type TripHeaderTrip = {
   title: string
@@ -11,18 +12,18 @@ type TripHeaderTrip = {
 
 interface TripHeaderProps {
   trip: TripHeaderTrip
+  onUploadPhotos?: () => void
   onChangeCover?: () => void
   onEdit?: () => void
   onShare?: () => void
-  onMore?: () => void
 }
 
 const TripHeader: React.FC<TripHeaderProps> = ({
   trip,
+  onUploadPhotos,
   onChangeCover,
   onEdit,
   onShare,
-  onMore,
 }) => {
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate)
@@ -64,39 +65,36 @@ const TripHeader: React.FC<TripHeaderProps> = ({
               type="button"
               variant="outline"
               className="border-white/10 bg-black/20 text-white hover:bg-white/5 hover:text-white"
-              onClick={onChangeCover}
+              onClick={onUploadPhotos}
             >
-              <Image className="h-4 w-4" />
-              Change Cover
+              <Upload className="h-4 w-4" />
+              Upload Photos
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-white/10 bg-black/20 text-white hover:bg-white/5 hover:text-white"
-              onClick={onEdit}
-            >
-              <Edit2 className="h-4 w-4" />
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-white/10 bg-black/20 text-white hover:bg-white/5 hover:text-white"
-              onClick={onShare}
-            >
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="border-white/10 bg-black/20 text-white hover:bg-white/5 hover:text-white"
-              onClick={onMore}
-              aria-label="More"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
+            <DropdownMenu
+              items={
+                [
+                  onChangeCover && {
+                    label: "Change Cover",
+                    icon: <Image className="h-4 w-4" />,
+                    onClick: onChangeCover,
+                  },
+                  onEdit && {
+                    label: "Edit",
+                    icon: <Edit2 className="h-4 w-4" />,
+                    onClick: onEdit,
+                  },
+                  onShare && {
+                    label: "Share",
+                    icon: <Share2 className="h-4 w-4" />,
+                    onClick: onShare,
+                  },
+                ].filter(Boolean) as {
+                  label: string
+                  icon: React.ReactNode
+                  onClick: () => void
+                }[]
+              }
+            />
           </div>
         </div>
       </div>
