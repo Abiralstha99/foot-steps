@@ -1,9 +1,17 @@
-
+import { useEffect } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
-
 import { Outlet } from "react-router-dom"
+import { useAppDispatch } from "@/app/hooks"
+import { fetchTrips } from "@/features/trips/tripsSlice"
 
 export function AppLayout() {
+  const dispatch = useAppDispatch()
+
+  // Fetch trips when the app loads
+  useEffect(() => {
+    dispatch(fetchTrips())
+  }, [dispatch])
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#070807] text-white font-sans">
       {/* Sidebar (desktop + mobile trigger handled inside) */}

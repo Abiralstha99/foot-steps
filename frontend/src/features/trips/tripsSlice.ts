@@ -5,13 +5,13 @@ import api from "@/lib/api"
 
 // Thunks - a special kind of function used fo async operations
 // Thunk = “I’m going to fetch data and automatically send pending/fulfilled/rejected actions.”
-export const fetchTrips = createAsyncThunk("users/fetchTrips", async () => {
+export const fetchTrips = createAsyncThunk("trips/fetchTrips", async () => {
     const response = await api.get("/trips");
     return response.data;
 });
 
 export const createTrip = createAsyncThunk<Trip, CreateTripInput, { rejectValue: string }>(
-    "users/createTrip",
+    "trips/createTrip",
     async (trip, { rejectWithValue }) => {
         try {
             const response = await api.post("/trips", trip);
