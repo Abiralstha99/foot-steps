@@ -3,11 +3,12 @@ import { useRef, useState } from "react";
 import { useUpload, useUploadState } from "@/features/uploads/useUpload";
 
 type UploadFormProps = {
+    tripId: string;
     onClose?: () => void;
     onFilesSelected?: (files: File[]) => void;
 };
 
-function UploadForm({ onClose, onFilesSelected }: UploadFormProps, tripId: string) {
+function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [uploadIds, setUploadIds] = useState<string[]>([]);
@@ -65,7 +66,7 @@ function UploadForm({ onClose, onFilesSelected }: UploadFormProps, tripId: strin
 
             // kick off the upload (fire-and-forget, or await if you like)
             uploadFile({
-                endpoint: `/api/trips/${tripId}/photos`,
+                endpoint: `/trips/${tripId}/photos`,
                 file,
                 uploadId, // pass it so Redux knows this id
             }).catch(console.error);
@@ -189,6 +190,11 @@ const UploadProgressRow: React.FC<{ uploadId: string }> = ({ uploadId }) => {
 
     const { progress, status, error } = upload;
 
+    const barColorClass =
+        status === "error"
+            ? "bg-red-500"
+            : "bg-green-500"
+
     return (
         <div className="flex flex-col gap-1 rounded-md border border-[#2d302e] bg-[#050605] p-2">
             <div className="flex items-center justify-between text-xs text-white">
@@ -198,7 +204,7 @@ const UploadProgressRow: React.FC<{ uploadId: string }> = ({ uploadId }) => {
 
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a1b1a]">
                 <div
-                    className="h-full bg-app-accent transition-[width]"
+                    className={`h-full transition-[width] ${barColorClass}`}
                     style={{ width: `${progress}%` }}
                 />
             </div>
