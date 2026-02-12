@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 
 export function HomePage() {
@@ -22,14 +23,18 @@ export function HomePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button className="bg-app-accent text-white hover:bg-app-accent-hover">
-          Start a new trip
+        <Button
+          asChild
+          className="bg-app-accent text-white hover:bg-app-accent-hover"
+        >
+          <Link to="/trips">Start a new trip</Link>
         </Button>
         <Button
+          asChild
           variant="outline"
           className="border-app-border bg-transparent text-app-text hover:bg-app-nav-hover"
         >
-          Browse past journeys
+          <Link to="/trips">Browse past journeys</Link>
         </Button>
       </div>
     </div>
