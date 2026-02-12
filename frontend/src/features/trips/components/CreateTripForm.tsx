@@ -1,8 +1,5 @@
 import { useState } from "react"
-import api from "@/lib/api"
-import { useAppDispatch } from "@/app/hooks"
-import { addTrips } from "@/features/trips/tripsSlice"
-import type { Trip } from "@/features/trips/types"
+import { useCreateTrip } from "@/features/trips/useTrips"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/DatePicker"
 import { cn } from "@/lib/utils"
@@ -16,8 +13,7 @@ type CreateTripModalProps = {
 const PLACEHOLDER_USER_ID = "2d21e013-bb58-4746-aeda-f1a1a39ec804"
 
 export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
-    const dispatch = useAppDispatch()
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const { createTrip, loading: isSubmitting, error: tripError } = useCreateTrip()
     const [error, setError] = useState<string | null>(null)
     const [form, setForm] = useState({
         name: "",
@@ -55,9 +51,8 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
             setError("End date must be on or after start date.")
             return
         }
-        setIsSubmitting(true)
         try {
-            const { data: newTrip } = await api.post<Trip>("/trips", {
+            await createTrip({
                 userId: PLACEHOLDER_USER_ID,
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
@@ -65,17 +60,11 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                 endDate: form.endDate,
                 ...(form.coverPhotoUrl.trim() && { coverPhotoUrl: form.coverPhotoUrl.trim() }),
             })
-            dispatch(addTrips(newTrip))
             resetForm()
             onOpenChange(false)
         } catch (err: unknown) {
-            const message =
-                err && typeof err === "object" && "response" in err
-                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-                    : "Failed to create trip."
+            const message = typeof err === "string" ? err : err instanceof Error ? err.message : "Failed to create trip."
             setError(message ?? "Failed to create trip.")
-        } finally {
-            setIsSubmitting(false)
         }
     }
 
@@ -114,9 +103,9 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                 </div>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-6 py-4">
-                    {error && (
+                    {(error || tripError) && (
                         <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400" role="alert">
-                            {error}
+                            {error ?? tripError}
                         </p>
                     )}
 
