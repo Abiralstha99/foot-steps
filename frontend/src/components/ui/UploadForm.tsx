@@ -1,6 +1,7 @@
 import type React from "react";
 import { useRef, useState } from "react";
-import { useUpload, useUploadState } from "@/features/uploads/useUpload";
+import { useAppSelector } from "@/app/hooks";
+import { selectUploadsById, useUpload } from "@/features/uploads/useUpload";
 
 type UploadFormProps = {
     tripId: string;
@@ -180,7 +181,8 @@ function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
 }
 
 const CombinedUploadProgress: React.FC<{ uploadIds: string[] }> = ({ uploadIds }) => {
-    const uploads = uploadIds.map(id => useUploadState(id)).filter(Boolean);
+    const uploadsById = useAppSelector(selectUploadsById);
+    const uploads = uploadIds.map((id) => uploadsById[id]).filter(Boolean);
 
     if (uploads.length === 0) return null;
 
