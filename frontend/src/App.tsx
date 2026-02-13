@@ -6,6 +6,7 @@ import { HomePage } from "@/pages/HomePage"
 import { LandingPage } from "@/pages/LandingPage"
 import { TripsPage } from "@/pages/Trips"
 import { TripDetailPage } from "@/pages/TripDetail"
+import ExplorePage from "@/pages/ExplorePage"
 
 function App() {
   const { isSignedIn, isLoaded } = useAuth()

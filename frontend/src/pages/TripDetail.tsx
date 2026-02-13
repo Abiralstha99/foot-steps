@@ -4,11 +4,13 @@ import { useTrips } from "@/features/trips/useTrips"
 import TripHeader from "@/features/trips/components/TripHeader"
 import { ViewModeSwitcher } from "@/features/trips/components/ViewModeSwitcher"
 import type { ViewMode } from "@/features/trips/components/ViewModeSwitcher"
+import UploadForm from "@/components/ui/UploadForm"
 
 export function TripDetailPage() {
   const { id: tripId } = useParams<{ id: string }>()
   const { trips, loading, error } = useTrips()
   const [activeMode, setActiveMode] = useState<ViewMode>("timeline")
+  const [uploadOpen, setUploadOpen] = useState(false)
 
   const trip = trips.find((t) => t.id === tripId)
 
@@ -46,6 +48,15 @@ export function TripDetailPage() {
           startDate: trip.startDate,
           endDate: trip.endDate,
         }}
+        onUploadPhotos={() => setUploadOpen(true)}
+        onChangeCover={() => {
+          // TODO: wire to real change-cover flow
+          console.log("Change cover clicked for trip", trip.id)
+        }}
+        onEdit={() => {
+          // TODO: wire to real edit flow
+          console.log("Edit clicked for trip", trip.id)
+        }}
       />
 
       <div className="relative max-w-7xl mx-auto px-6 py-8">
@@ -72,6 +83,13 @@ export function TripDetailPage() {
           </div>
         )}
       </div>
+
+      {uploadOpen && tripId && (
+        <UploadForm
+          tripId={tripId}
+          onClose={() => setUploadOpen(false)}
+        />
+      )}
     </div>
   )
 }
