@@ -151,11 +151,7 @@ function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
 
                 {/* Upload progress */}
                 {uploadIds.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                        {uploadIds.map((uploadId) => (
-                            <UploadProgressRow key={uploadId} uploadId={uploadId} />
-                        ))}
-                    </div>
+                    <CombinedUploadProgress uploadIds={uploadIds} />
                 )}
 
                 {/* Footer actions */}
@@ -183,35 +179,42 @@ function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
     );
 }
 
-const UploadProgressRow: React.FC<{ uploadId: string }> = ({ uploadId }) => {
-    const upload = useUploadState(uploadId);
+const CombinedUploadProgress: React.FC<{ uploadIds: string[] }> = ({ uploadIds }) => {
+    const uploads = uploadIds.map(id => useUploadState(id)).filter(Boolean);
 
-    if (!upload) return null;
+    if (uploads.length === 0) return null;
 
-    const { progress, status, error } = upload;
+    // Calculate overall progress as average of all uploads
+    const totalProgress = uploads.reduce((sum, upload) => sum + (upload?.progress ?? 0), 0);
+    const averageProgress = Math.round(totalProgress / uploads.length);
 
-    const barColorClass =
-        status === "error"
-            ? "bg-red-500"
-            : "bg-green-500"
+    // Check if any uploads have errors
+    const hasError = uploads.some(upload => upload?.status === "error");
+    const errorCount = uploads.filter(upload => upload?.status === "error").length;
+    const doneCount = uploads.filter(upload => upload?.status === "done").length;
+
+    const barColorClass = hasError ? "bg-red-500" : "bg-green-500";
 
     return (
-        <div className="flex flex-col gap-1 rounded-md border border-[#2d302e] bg-[#050605] p-2">
-            <div className="flex items-center justify-between text-xs text-white">
-                <span>{uploadId}</span>
-                <span>{progress}%</span>
+        <div className="mt-4 flex flex-col gap-2 rounded-md border border-[#2d302e] bg-[#050605] p-3">
+            <div className="flex items-center justify-between text-sm text-white">
+                <span>Uploading {uploads.length} file{uploads.length !== 1 ? 's' : ''}</span>
+                <span className="font-medium">{averageProgress}%</span>
             </div>
 
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a1b1a]">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1b1a]">
                 <div
-                    className={`h-full transition-[width] ${barColorClass}`}
-                    style={{ width: `${progress}%` }}
+                    className={`h-full transition-[width] duration-300 ${barColorClass}`}
+                    style={{ width: `${averageProgress}%` }}
                 />
             </div>
 
-            <div className="flex items-center justify-between text-[10px] text-[#9A9C9B]">
-                <span>Status: {status}</span>
-                {error && <span className="text-red-400">Error: {error}</span>}
+            <div className="flex items-center justify-between text-xs text-[#9A9C9B]">
+                <span>
+                    {doneCount > 0 && `${doneCount} completed`}
+                    {errorCount > 0 && ` • ${errorCount} failed`}
+                    {doneCount === 0 && errorCount === 0 && 'Uploading...'}
+                </span>
             </div>
         </div>
     );
