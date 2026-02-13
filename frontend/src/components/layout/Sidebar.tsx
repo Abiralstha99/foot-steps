@@ -7,6 +7,7 @@ import {
     Menu,
     Settings,
 } from "lucide-react"
+import { UserButton, useUser } from "@clerk/clerk-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -29,6 +30,20 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     { label: "Settings", icon: <Settings className="size-4" />, to: "/settings" },
 ]
+
+function UserInfo() {
+    const { user } = useUser()
+    return (
+        <div className="flex flex-col">
+            <span className="text-xs font-medium text-white">
+                {user?.firstName || "Traveler"}
+            </span>
+            <span className="text-[11px] text-[#9A9C9B]">
+                View profile
+            </span>
+        </div>
+    )
+}
 
 function SidebarNavList({ items }: { items: NavItem[] }) {
     return (
@@ -141,17 +156,16 @@ export function Sidebar() {
                     <div className="space-y-3">
                         <SidebarNavList items={footerNavItems} />
                         <div className="mt-3 flex items-center gap-3">
-                            <div className="flex size-8 items-center justify-center rounded-full bg-[#181818] text-xs font-semibold text-white">
-                                TJ
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-medium text-white">
-                                    Traveler in Focus
-                                </span>
-                                <span className="text-[11px] text-[#9A9C9B]">
-                                    View profile
-                                </span>
-                            </div>
+                            <UserButton
+                                appearance={{
+                                    elements: {
+                                        avatarBox: "size-8",
+                                        userButtonPopoverCard: "bg-[#121212] border border-[#1A1A1A]",
+                                        userButtonPopoverActionButton: "hover:bg-[#1A1A1A]"
+                                    }
+                                }}
+                            />
+                            <UserInfo />
                         </div>
                     </div>
                 </div>
@@ -212,17 +226,16 @@ export function Sidebar() {
                     <div className="space-y-3 border-t border-[#1A1A1A] pt-4">
                         <SidebarNavList items={footerNavItems} />
                         <div className="mt-3 flex items-center gap-3">
-                            <div className="flex size-8 items-center justify-center rounded-full bg-[#181818] text-xs font-semibold text-white">
-                                TJ
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-medium text-white">
-                                    Traveler in Focus
-                                </span>
-                                <span className="text-[11px] text-[#9A9C9B]">
-                                    View profile
-                                </span>
-                            </div>
+                            <UserButton
+                                appearance={{
+                                    elements: {
+                                        avatarBox: "size-8",
+                                        userButtonPopoverCard: "bg-[#121212] border border-[#1A1A1A]",
+                                        userButtonPopoverActionButton: "hover:bg-[#1A1A1A]"
+                                    }
+                                }}
+                            />
+                            <UserInfo />
                         </div>
                     </div>
                 </div>
