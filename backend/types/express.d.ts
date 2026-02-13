@@ -15,7 +15,7 @@ declare global {
       [key: string]: any;
     }
     interface Request {
-      auth: Auth;
+      auth: () => Auth;
       [key: string]: any;
     }
     interface Response {

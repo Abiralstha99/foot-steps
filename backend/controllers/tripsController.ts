@@ -6,14 +6,14 @@ import exifr from "exifr";
 import { buffer } from "node:stream/consumers";
 
 async function getTrip(req: Request, res: Response) {
-  const userId = req.auth.userId;
+  const userId = req.auth().userId;
   const trips = await prisma.trip.findMany({ where: { userId } });
   return res.json(trips);
 }
 
 async function createTrip(req: Request, res: Response) {
   try {
-    const userId = req.auth.userId;
+    const userId = req.auth().userId;
     const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
     //Basic validation
@@ -54,7 +54,7 @@ async function createTrip(req: Request, res: Response) {
 
 
 async function getTripById(req: Request, res: Response) {
-  const userId = req.auth.userId;
+  const userId = req.auth().userId;
   const { id } = req.params;
   const prismaTrip = await prisma.trip.findUnique({
     where: { id },
@@ -71,7 +71,7 @@ async function getTripById(req: Request, res: Response) {
 
 async function updateTripById(req: Request, res: Response) {
   try {
-    const userId = req.auth.userId;
+    const userId = req.auth().userId;
     const { id } = req.params;
     const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
@@ -107,7 +107,7 @@ async function updateTripById(req: Request, res: Response) {
 
 async function deleteTripById(req: Request, res: Response) {
   try {
-    const userId = req.auth.userId;
+    const userId = req.auth().userId;
     const { id } = req.params;
 
     // Check if trip exists first
@@ -174,11 +174,8 @@ async function createPhoto(req: Request, res: Response) {
 
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
-
-  // Verify trip ownership
-  const userId = req.auth.userId;
-  if (trip.userId !== userId) {
-    return res.status(403).json({ message: "Forbidden: You don't own this trip" });
+  if (trip.userId !== req.auth().userId) {
+    return res.status(403).json({ message: "Forbidden" });
   }
 
   const photoId = crypto.randomUUID();
