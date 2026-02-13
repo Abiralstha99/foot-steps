@@ -1,20 +1,56 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { useTrips } from "@/features/trips/useTrips"
 import TripHeader from "@/features/trips/components/TripHeader"
 import { ViewModeSwitcher } from "@/features/trips/components/ViewModeSwitcher"
 import type { ViewMode } from "@/features/trips/components/ViewModeSwitcher"
 import UploadForm from "@/components/ui/UploadForm"
+import api from "@/lib/api"
+import type { Photo, Trip } from "@/app/types"
+import { PhotoGrid } from "@/features/photos/components/PhotoGrid"
+import { PhotoModal } from "@/features/photos/components/PhotoModal"
+import { useUpdatePhoto } from "@/features/photos/usePhotos"
+
+type TripWithPhotos = Trip & { photos: Photo[] }
 
 export function TripDetailPage() {
   const { id: tripId } = useParams<{ id: string }>()
-  const { trips, loading, error } = useTrips()
   const [activeMode, setActiveMode] = useState<ViewMode>("timeline")
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [trip, setTrip] = useState<TripWithPhotos | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { updatePhotoCaption } = useUpdatePhoto()
 
-  const trip = trips.find((t) => t.id === tripId)
+  useEffect(() => {
+    if (!tripId) return
+    let cancelled = false
 
-  if (loading) {
+    const fetchTrip = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const res = await api.get(`/trips/${tripId}`)
+        if (cancelled) return
+        setTrip(res.data as TripWithPhotos)
+      } catch (err: any) {
+        if (cancelled) return
+        const message =
+          err?.response?.data?.message ?? err?.message ?? "Failed to load trip"
+        setError(message)
+        setTrip(null)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    fetchTrip()
+    return () => {
+      cancelled = true
+    }
+  }, [tripId])
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0A0A0A]">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -78,11 +114,22 @@ export function TripDetailPage() {
         )}
 
         {activeMode === "grid" && (
-          <div className="p-8 text-[#9A9C9B] text-center">
-            <p className="text-lg">Grid View (Coming Soon)</p>
-          </div>
+          <PhotoGrid
+            photos={trip.photos ?? []}
+            isLoading={isLoading}
+            onPhotoClick={(photo) => setSelectedPhoto(photo)}
+          />
         )}
       </div>
+
+      <PhotoModal
+        photo={selectedPhoto}
+        open={!!selectedPhoto}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPhoto(null)
+        }}
+        onUpdateCaption={updatePhotoCaption}
+      />
 
       {uploadOpen && tripId && (
         <UploadForm

@@ -1,9 +1,9 @@
 import express from "express";
-import { getAllPhotos } from "../controllers/photoController";
+import { updatePhoto } from "../controllers/photoController";
+import { clerkAuth, syncUser } from "../middleware/auth";
 
-const photosRouter = express.Router();
+const photoRouter = express.Router();
 
-// GET /api/photos/all - Get all photos with coordinates
-photosRouter.get("/all", getAllPhotos);
+photoRouter.patch("/:photoId", clerkAuth, syncUser, updatePhoto);
 
-export default photosRouter;
+export default photoRouter;
