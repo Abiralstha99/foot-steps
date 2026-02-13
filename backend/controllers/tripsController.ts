@@ -4,6 +4,7 @@ import { uploadFile, getPresignedUrl } from "../services/s3.service";
 import { upload } from "../lib/multer";
 import exifr from "exifr";
 import { buffer } from "node:stream/consumers";
+import { get } from "node:http";
 
 async function getTrip(req: Request, res: Response) {
   const userId = req.auth().userId;
@@ -52,21 +53,42 @@ async function createTrip(req: Request, res: Response) {
   }
 }
 
-
+// Generate new preSignedURL 
 async function getTripById(req: Request, res: Response) {
-  const userId = req.auth().userId;
-  const { id } = req.params;
-  const prismaTrip = await prisma.trip.findUnique({
-    where: { id },
-    include: { photos: true },
-  });
-  if (!prismaTrip) {
-    return res.status(404).json({ message: "Trip not found" });
+  try {
+    const userId = req.auth().userId;
+    const { id } = req.params;
+    const prismaTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: { photos: true },
+    });
+    if (!prismaTrip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+    if (prismaTrip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Generate fresh presigned URLs using stored s3Key (do not persist presigned URLs)
+    const photosWithFreshUrls = await Promise.all(
+      prismaTrip.photos.map(async (photo) => {
+        const viewUrl = await getPresignedUrl(photo.s3Key);
+        return {
+          ...photo,
+          viewUrl,
+        };
+      }),
+    );
+
+    const tripWithFreshUrls = {
+      ...prismaTrip,
+      photos: photosWithFreshUrls,
+    };
+    return res.json(tripWithFreshUrls);
+  } catch (error) {
+    console.error("Error fetching trip:", error);
+    return res.status(500).json({ message: "Failed to fetch trip" });
   }
-  if (prismaTrip.userId !== userId) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
-  return res.json(prismaTrip);
 };
 
 async function updateTripById(req: Request, res: Response) {
@@ -187,13 +209,12 @@ async function createPhoto(req: Request, res: Response) {
     photoId,
     file.originalname
   );
-  const url = await getPresignedUrl(key);
 
   const photo = await prisma.photo.create({
     data: {
       id: photoId,
       tripId,
-      url,
+      s3Key: key,
       takenAt,
       latitude,
       longitude,
@@ -201,7 +222,8 @@ async function createPhoto(req: Request, res: Response) {
     },
   });
 
-  return res.status(201).json(photo);
+  const viewUrl = await getPresignedUrl(key);
+  return res.status(201).json({ ...photo, viewUrl });
 }
 
 // Middleware to handle photo upload with multer
