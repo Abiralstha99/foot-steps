@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useUser } from "@clerk/clerk-react"
 import { useCreateTrip } from "@/features/trips/useTrips"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/DatePicker"
@@ -9,10 +10,8 @@ type CreateTripModalProps = {
     onOpenChange: (open: boolean) => void
 }
 
-// Placeholder until auth is implemented; backend requires userId
-const PLACEHOLDER_USER_ID = "2d21e013-bb58-4746-aeda-f1a1a39ec804"
-
 export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
+    const { user } = useUser()
     const { createTrip, loading: isSubmitting, error: tripError } = useCreateTrip()
     const [error, setError] = useState<string | null>(null)
     const [form, setForm] = useState({
@@ -51,9 +50,13 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
             setError("End date must be on or after start date.")
             return
         }
+        if (!user?.id) {
+            setError("You must be signed in to create a trip.")
+            return
+        }
         try {
             await createTrip({
-                userId: PLACEHOLDER_USER_ID,
+                userId: user.id,
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
                 startDate: form.startDate,
