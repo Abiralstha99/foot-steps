@@ -1,25 +1,9 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 
-function getUserId(req: Request): string | null {
-  const fromAuth = (req as any).user?.id;
-  if (typeof fromAuth === "string" && fromAuth) return fromAuth;
-
-  const fromQuery = (req.query as any)?.userId;
-  if (typeof fromQuery === "string" && fromQuery) return fromQuery;
-
-  const fromBody = (req.body as any)?.userId;
-  if (typeof fromBody === "string" && fromBody) return fromBody;
-
-  return null;
-}
-
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
-    if (!userId) {
-      return res.status(400).json({ error: "Missing userId" });
-    }
+    const userId = req.auth.userId;
 
     const totalTrips = await prisma.trip.count({
       where: { userId },
@@ -55,10 +39,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
 export const getOnThisDay = async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
-    if (!userId) {
-      return res.status(400).json({ error: "Missing userId" });
-    }
+    const userId = req.auth.userId;
     const today = new Date();
     const currentMonth = today.getMonth() + 1;
     const currentDay = today.getDate();
@@ -156,10 +137,7 @@ export const getOnThisDay = async (req: Request, res: Response) => {
 
 export const getUpcomingTrips = async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
-    if (!userId) {
-      return res.status(400).json({ error: "Missing userId" });
-    }
+    const userId = req.auth.userId;
     const today = new Date();
 
     const upcomingTrips = await prisma.trip.findMany({
@@ -206,10 +184,7 @@ export const getUpcomingTrips = async (req: Request, res: Response) => {
 
 export const getRecentActivity = async (req: Request, res: Response) => {
   try {
-    const userId = getUserId(req);
-    if (!userId) {
-      return res.status(400).json({ error: "Missing userId" });
-    }
+    const userId = req.auth.userId;
 
     // Approximate "last modified" using recent photo uploads since Trip has no updatedAt field.
     const recentPhotos = await prisma.photo.findMany({

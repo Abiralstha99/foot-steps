@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom"
+import { useAuth } from "@clerk/clerk-react"
+import { useAuthToken } from "@/features/auth/useAuthToken"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { HomePage } from "@/pages/HomePage"
 import { LandingPage } from "@/pages/LandingPage"
@@ -7,38 +9,27 @@ import { TripDetailPage } from "@/pages/TripDetail"
 import ExplorePage from "@/pages/ExplorePage"
 
 function App() {
-  const isAuthenticated = true
+  const { isSignedIn, isLoaded } = useAuth()
+  useAuthToken()
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#070807]">
+        <div className="text-[#9A9C9B]">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <Routes>
-      {/* Landing page without sidebar */}
-      <Route
-        path="/"
-        element={isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />}
-      />
+      {/* Public route */}
+      <Route path="/" element={isSignedIn ? <Navigate to="/home" replace /> : <LandingPage />} />
 
-      {/* App routes with sidebar */}
+      {/* Protected routes with sidebar */}
       <Route element={<AppLayout />}>
-        <Route
-          path="/home"
-          element={isAuthenticated ? <HomePage /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/trips"
-          element={isAuthenticated ? <TripsPage /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/trips/:id"
-          element={
-            isAuthenticated ? <TripDetailPage /> : <Navigate to="/" replace />
-          }
-        />
-        <Route
-          path="/explore"
-          element={
-            isAuthenticated ? <ExplorePage /> : <Navigate to="/" replace />
-          }
-        />
+        <Route path="/home" element={isSignedIn ? <HomePage /> : <Navigate to="/" replace />} />
+        <Route path="/trips" element={isSignedIn ? <TripsPage /> : <Navigate to="/" replace />} />
+        <Route path="/trips/:id" element={isSignedIn ? <TripDetailPage /> : <Navigate to="/" replace />} />
       </Route>
     </Routes>
   )
