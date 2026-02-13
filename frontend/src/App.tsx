@@ -30,6 +30,7 @@ function App() {
         <Route path="/home" element={isSignedIn ? <HomePage /> : <Navigate to="/" replace />} />
         <Route path="/trips" element={isSignedIn ? <TripsPage /> : <Navigate to="/" replace />} />
         <Route path="/trips/:id" element={isSignedIn ? <TripDetailPage /> : <Navigate to="/" replace />} />
+        <Route path="/explore" element={isSignedIn ? <ExplorePage /> : <Navigate to="/" replace />} />
       </Route>
     </Routes>
   )

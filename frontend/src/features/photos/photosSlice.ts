@@ -1,6 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
 import type { Photo } from "@/app/types"
+import api from "@/lib/api" 
+import { createAsyncThunk } from "@reduxjs/toolkit"
+
+export const fetchAllPhotos = createAsyncThunk(
+    "photos/fetchAll", 
+    async () => {
+      const response = await api.get("/photos/all");
+      return response.data;
+    }
+  );
 
 export const photosSlice = createSlice({
     name: "photos",
@@ -28,6 +38,18 @@ export const photosSlice = createSlice({
             }
         },
     },
+    extraReducers: (builder) => {
+        builder.addCase(fetchAllPhotos.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+        });
+        builder.addCase(fetchAllPhotos.fulfilled, (state, action) => {
+            state.loading = false;
+            state.photos = action.payload;
+        });
+    }
 })
+
+
 
 export const { addPhoto, removePhoto, updatePhoto } = photosSlice.actions;
