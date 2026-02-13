@@ -10,7 +10,12 @@ declare module "express" {
 
 declare global {
   namespace Express {
+    interface Auth {
+      userId: string;
+      [key: string]: any;
+    }
     interface Request {
+      auth: Auth;
       [key: string]: any;
     }
     interface Response {
