@@ -1,22 +1,25 @@
 import { prisma } from "../lib/prisma";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { uploadFile, getPresignedUrl } from "../services/s3.service";
+import { upload } from "../lib/multer";
 import exifr from "exifr";
 import { buffer } from "node:stream/consumers";
 
 async function getTrip(req: Request, res: Response) {
-  const trips = await prisma.trip.findMany({});
+  const userId = req.auth.userId;
+  const trips = await prisma.trip.findMany({ where: { userId } });
   return res.json(trips);
 }
 
 async function createTrip(req: Request, res: Response) {
   try {
-    const { userId, name, description, startDate, endDate, coverPhotoUrl } = req.body;
+    const userId = req.auth.userId;
+    const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
     //Basic validation
-    if (!userId || !name || !startDate || !endDate) {
+    if (!name || !startDate || !endDate) {
       return res.status(400).json({
-        message: "Missing required fields: userId, name, startDate, endDate",
+        message: "Missing required fields: name, startDate, endDate",
       });
     }
 
@@ -51,6 +54,7 @@ async function createTrip(req: Request, res: Response) {
 
 
 async function getTripById(req: Request, res: Response) {
+  const userId = req.auth.userId;
   const { id } = req.params;
   const prismaTrip = await prisma.trip.findUnique({
     where: { id },
@@ -59,11 +63,15 @@ async function getTripById(req: Request, res: Response) {
   if (!prismaTrip) {
     return res.status(404).json({ message: "Trip not found" });
   }
+  if (prismaTrip.userId !== userId) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
   return res.json(prismaTrip);
 };
 
 async function updateTripById(req: Request, res: Response) {
   try {
+    const userId = req.auth.userId;
     const { id } = req.params;
     const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
@@ -73,6 +81,9 @@ async function updateTripById(req: Request, res: Response) {
 
     if (!existingTrip) {
       return res.status(404).json({ message: "Trip not found" });
+    }
+    if (existingTrip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     const updateData: any = {};
@@ -96,6 +107,7 @@ async function updateTripById(req: Request, res: Response) {
 
 async function deleteTripById(req: Request, res: Response) {
   try {
+    const userId = req.auth.userId;
     const { id } = req.params;
 
     // Check if trip exists first
@@ -105,6 +117,9 @@ async function deleteTripById(req: Request, res: Response) {
 
     if (!existingTrip) {
       return res.status(404).json({ message: "Trip not found" });
+    }
+    if (existingTrip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     // Delete the trip (use delete() for single record by unique field)
@@ -160,6 +175,12 @@ async function createPhoto(req: Request, res: Response) {
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
+  // Verify trip ownership
+  const userId = req.auth.userId;
+  if (trip.userId !== userId) {
+    return res.status(403).json({ message: "Forbidden: You don't own this trip" });
+  }
+
   const photoId = crypto.randomUUID();
   const key = await uploadFile(
     file.buffer,
@@ -185,4 +206,18 @@ async function createPhoto(req: Request, res: Response) {
 
   return res.status(201).json(photo);
 }
-export { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto };
+
+// Middleware to handle photo upload with multer
+function handlePhotoUpload(req: Request, res: Response, next: NextFunction) {
+  upload.single("photo")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        message: "Upload failed",
+        error: err.message,
+      });
+    }
+    next();
+  });
+}
+
+export { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto, handlePhotoUpload };
