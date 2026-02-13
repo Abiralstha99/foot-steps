@@ -35,7 +35,7 @@ export function PhotoGrid({ photos, isLoading = false, onPhotoClick }: PhotoGrid
       {photos.map((photo) => {
         const tagCount = photo.aiTags?.length ?? 0
         const caption = photo.caption ?? ""
-        const src = photo.viewUrl ?? photo.url
+        const src = photo.viewUrl ?? photo.url ?? ""
 
         return (
           <div
