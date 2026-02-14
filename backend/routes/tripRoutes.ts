@@ -1,5 +1,6 @@
 import express from "express";
-import { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto, handlePhotoUpload } from "../controllers/tripsController";
+import { getTrip, createTrip, getTripById, updateTripById, deleteTripById } from "../controllers/tripsController";
+import { createPhoto, handlePhotoUpload } from "../controllers/photoController";
 import { clerkAuth, syncUser } from "../middleware/auth";
 
 const tripsRouter = express.Router();

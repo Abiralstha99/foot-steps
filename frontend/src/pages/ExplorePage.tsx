@@ -4,7 +4,6 @@ import { fetchAllPhotos } from "@/features/photos/photosSlice";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import 'leaflet.markercluster';
-import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 
 function ExplorePage() {
     const mapContainer = useRef(null);
@@ -25,42 +24,49 @@ function ExplorePage() {
 
     // Initialize map once
     useEffect(() => {
-        if (map.current) return;
+        if (map.current || !mapContainer.current) return;
 
-        if (mapContainer.current) {
-            map.current = new L.Map(mapContainer.current as HTMLElement, {
-                center: L.latLng(center.lat, center.lng),
-                zoom: zoom,
-                maxZoom: 18,    // ADD THIS
-                minZoom: 2      // ADD THIS
-            });
+        map.current = new L.Map(mapContainer.current as HTMLElement, {
+            center: L.latLng(center.lat, center.lng),
+            zoom: zoom,
+            maxZoom: 18,
+            minZoom: 2
+        });
 
-            // Add MapTiler layer
-            new MaptilerLayer({
-                apiKey: "BrgTwPNH7EN2oggvAkLG",
-                style: "019c53d2-08a9-76b8-8b10-9a29401e626b",
-            }).addTo(map.current);
+        // Use raster tiles directly to avoid MapTiler SDK runtime map lifecycle issues.
+        L.tileLayer("https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=BrgTwPNH7EN2oggvAkLG", {
+            tileSize: 512,
+            zoomOffset: -1,
+            attribution:
+                '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank" rel="noreferrer">MapTiler</a> ' +
+                '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>',
+        }).addTo(map.current);
 
-            // Initialize marker cluster group
-            markerClusterGroup.current = L.markerClusterGroup({
-                maxClusterRadius: 50,  // Smaller radius = less aggressive clustering
-                spiderfyOnMaxZoom: true,
-                showCoverageOnHover: false,
-                zoomToBoundsOnClick: true,
-                disableClusteringAtZoom: 13,  // Show all individual markers at zoom 13+
-                iconCreateFunction: function (cluster) {
-                    // Single marker look for clusters
-                    return L.divIcon({
-                        html: `<img src="/src/assets/pin.png" style="width: 32px; height: 32px;" />`,
-                        className: 'custom-cluster-wrapper',
-                        iconSize: L.point(32, 32),
-                        iconAnchor: [16, 32]
-                    });
-                }
-            });
+        // Initialize marker cluster group
+        markerClusterGroup.current = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            disableClusteringAtZoom: 13,
+            iconCreateFunction: function () {
+                return L.divIcon({
+                    html: `<img src="/src/assets/pin.png" style="width: 32px; height: 32px;" />`,
+                    className: 'custom-cluster-wrapper',
+                    iconSize: L.point(32, 32),
+                    iconAnchor: [16, 32]
+                });
+            }
+        });
 
-            markerClusterGroup.current.addTo(map.current);
-        }
+        markerClusterGroup.current.addTo(map.current);
+
+        return () => {
+            markerClusterGroup.current?.clearLayers();
+            markerClusterGroup.current = null;
+            map.current?.remove();
+            map.current = null;
+        };
     }, [center.lng, center.lat, zoom]);
 
     // Update markers when photos change
@@ -72,7 +78,7 @@ function ExplorePage() {
 
         // Add markers for photos with coordinates
         photos.forEach(photo => {
-            if (photo.latitude && photo.longitude) {
+            if (photo.latitude != null && photo.longitude != null) {
                 const customIcon = L.icon({
                     iconUrl: '/src/assets/pin.png',
                     iconSize: [32, 32],       // Size of the icon
@@ -80,18 +86,19 @@ function ExplorePage() {
                     popupAnchor: [0, -32],    // Point from which popup opens
                 });
 
+                const displayUrl = photo.viewUrl ?? photo.url ?? "";
                 const marker = L.marker([photo.latitude, photo.longitude], {
                     icon: customIcon
                 });
                 marker.bindPopup(`
                     <div style="max-width: 220px;">
                         <img 
-                            src="${photo.url}" 
+                            src="${displayUrl}" 
                             style="width: 100%; max-width: 200px; max-height: 200px; object-fit: cover; display: block; margin-bottom: 8px;" 
                             alt="${photo.caption || 'Trip photo'}"
                         />
                         <p style="margin: 0 0 4px 0;">${photo.caption || 'No caption'}</p>
-                        <small style="word-break: break-all;">${photo.url}</small>
+                        <small style="word-break: break-all;">${displayUrl}</small>
                     </div>
                 `);
 

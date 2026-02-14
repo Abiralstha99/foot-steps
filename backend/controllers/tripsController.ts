@@ -1,10 +1,6 @@
 import { prisma } from "../lib/prisma";
-import { Request, Response, NextFunction } from "express";
-import { uploadFile, getPresignedUrl } from "../services/s3.service";
-import { upload } from "../lib/multer";
-import exifr from "exifr";
-import { buffer } from "node:stream/consumers";
-import { get } from "node:http";
+import { Request, Response } from "express";
+import { getPresignedUrl } from "../services/s3.service";
 
 async function getTrip(req: Request, res: Response) {
   const userId = req.auth().userId;
@@ -156,87 +152,4 @@ async function deleteTripById(req: Request, res: Response) {
   }
 }
 
-async function createPhoto(req: Request, res: Response) {
-  if (!req.file) {
-    const contentType = req.headers["content-type"] || "";
-    return res.status(400).json({
-      message: "No file uploaded",
-      hint: "Use form-data with key 'photo' and type File. Content-Type received: " + contentType,
-    });
-  }
-
-  const file = req.file;
-  const tripId = req.params.tripId;
-
-  let takenAt: Date | null = null;
-  let latitude: number | null = null;
-  let longitude: number | null = null;
-
-  try {
-    const exif = await exifr.parse(file.buffer);
-    if (exif) {
-      if (exif.DateTimeOriginal) {
-        const d = new Date(exif.DateTimeOriginal);
-        if (!Number.isNaN(d.getTime())) takenAt = d;
-      }
-      if (exif.latitude != null && !Number.isNaN(Number(exif.latitude))) {
-        latitude = Number(exif.latitude);
-      }
-      if (exif.longitude != null && !Number.isNaN(Number(exif.longitude))) {
-        longitude = Number(exif.longitude);
-      }
-    }
-  } catch (err) {
-    console.error("EXIF parsing failed, continuing without metadata:", err);
-  }
-
-  if (!tripId) {
-    return res.status(404).json({ message: "No tripId found" });
-  }
-
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) return res.status(404).json({ message: "Trip not found" });
-  if (trip.userId !== req.auth().userId) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
-
-  const photoId = crypto.randomUUID();
-  const key = await uploadFile(
-    file.buffer,
-    file.mimetype,
-    trip.userId,
-    tripId,
-    photoId,
-    file.originalname
-  );
-
-  const photo = await prisma.photo.create({
-    data: {
-      id: photoId,
-      tripId,
-      s3Key: key,
-      takenAt,
-      latitude,
-      longitude,
-      aiTags: [],
-    },
-  });
-
-  const viewUrl = await getPresignedUrl(key);
-  return res.status(201).json({ ...photo, viewUrl });
-}
-
-// Middleware to handle photo upload with multer
-function handlePhotoUpload(req: Request, res: Response, next: NextFunction) {
-  upload.single("photo")(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({
-        message: "Upload failed",
-        error: err.message,
-      });
-    }
-    next();
-  });
-}
-
-export { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto, handlePhotoUpload };
+export { getTrip, createTrip, getTripById, updateTripById, deleteTripById };
