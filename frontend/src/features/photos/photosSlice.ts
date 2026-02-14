@@ -2,6 +2,15 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
 import type { Photo } from "@/app/types"
 import { updatePhotoCaption } from "@/features/photos/api/photosApi"
+import api from "@/lib/api"
+
+export const fetchAllPhotos = createAsyncThunk<Photo[]>(
+    "photos/fetchAll",
+    async () => {
+      const response = await api.get<Photo[]>("/photos/all");
+      return response.data;
+    }
+  );
 
 export const updatePhotoCaptionThunk = createAsyncThunk<
   Photo,
@@ -45,6 +54,20 @@ export const photosSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
+        builder
+            .addCase(fetchAllPhotos.pending, (state) => {
+                state.loading = true
+                state.error = null
+            })
+            .addCase(fetchAllPhotos.fulfilled, (state, action) => {
+                state.loading = false
+                state.photos = action.payload
+                state.error = null
+            })
+            .addCase(fetchAllPhotos.rejected, (state, action) => {
+                state.loading = false
+                state.error = action.error.message ?? "Failed to fetch photos"
+            })
         builder.addCase(updatePhotoCaptionThunk.pending, (state, action) => {
             state.loading = true
             state.error = null

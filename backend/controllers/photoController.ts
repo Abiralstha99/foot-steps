@@ -18,15 +18,7 @@ async function getAllPhotos(req: Request, res: Response) {
       }
     });
 
-    const photosWithFreshUrls = await Promise.all(
-      photos.map(async (photo) => {
-        const viewUrl = await getPresignedUrl(photo.s3Key);
-        return {
-          ...photo,
-          viewUrl,
-        };
-      }),
-    );
+    
     return res.json(photosWithFreshUrls);
   } catch (error) {
     console.error("Error fetching photos:", error);
@@ -36,7 +28,7 @@ async function getAllPhotos(req: Request, res: Response) {
   }
 }
 
-export { getAllPhotos };
+
 
 export const updatePhoto = async (req: Request, res: Response) => {
   try {
@@ -80,3 +72,24 @@ export const updatePhoto = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Failed to update photo" });
   }
 };
+
+async function getPhotoById(req: Request, res: Response) {
+  try {
+    const { photoId } = req.params;
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      });
+    if (!photo) {
+      return res.status(404).json({ message: "Photo not found" });
+    }
+    const viewUrl = await getPresignedUrl(photo.s3Key);
+    return res.json({
+      ...photo,
+      viewUrl,
+    });
+  } catch (error) {
+    console.error("Error fetching photo:", error);
+    return res.status(500).json({ message: "Failed to fetch photo" });
+  }
+  }
+  export { getAllPhotos, getPhotoById };
