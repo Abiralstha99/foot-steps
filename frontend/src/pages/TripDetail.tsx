@@ -14,7 +14,7 @@ type TripWithPhotos = Trip & { photos: Photo[] }
 
 export function TripDetailPage() {
   const { id: tripId } = useParams<{ id: string }>()
-  const [activeMode, setActiveMode] = useState<ViewMode>("timeline")
+  const [activeMode, setActiveMode] = useState<ViewMode>("grid")
   const [uploadOpen, setUploadOpen] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [trip, setTrip] = useState<TripWithPhotos | null>(null)
