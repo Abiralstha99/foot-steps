@@ -45,8 +45,9 @@ export const useUpload = () => {
         })
 
         const url = response.data?.url
-        if (!url) throw new Error("No URL in response")
-
+        if (!url) {
+          throw new Error("No URL in response")
+        }
         dispatch(setUploadUrl({ id: uploadId, url }))
         dispatch(setUploadStatus({ id: uploadId, status: "done" }))
 
