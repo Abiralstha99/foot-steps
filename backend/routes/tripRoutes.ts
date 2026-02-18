@@ -1,31 +1,17 @@
 import express from "express";
-import { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto } from "../controllers/tripsController";
-import { upload } from "../lib/multer";
+import { getTrip, createTrip, getTripById, updateTripById, deleteTripById } from "../controllers/tripsController";
+import { createPhoto, handlePhotoUpload } from "../controllers/photoController";
+import { clerkAuth, syncUser } from "../middleware/auth";
 
 const tripsRouter = express.Router();
 
-tripsRouter.get("/", getTrip);
-tripsRouter.post("/", createTrip);
+tripsRouter.get("/", clerkAuth, syncUser, getTrip);
+tripsRouter.post("/", clerkAuth, syncUser, createTrip);
 
-tripsRouter.post(
-  "/:tripId/photos",
-  (req, res, next) => {
-    upload.single("photo")(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          message: "Upload failed",
-          error: err.message,
-        });
-      }
-      next();
-    });
-  },
-  createPhoto
-);
+tripsRouter.post("/:tripId/photos", clerkAuth, syncUser, handlePhotoUpload, createPhoto);
 
-tripsRouter.get("/:id", getTripById);
-tripsRouter.patch("/:id", updateTripById);
-tripsRouter.delete("/:id", deleteTripById);
-
+tripsRouter.get("/:id", clerkAuth, syncUser, getTripById);
+tripsRouter.patch("/:id", clerkAuth, syncUser, updateTripById);
+tripsRouter.delete("/:id", clerkAuth, syncUser, deleteTripById);
 
 export default tripsRouter;

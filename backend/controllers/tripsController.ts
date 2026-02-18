@@ -1,22 +1,35 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
-import { uploadFile, getPresignedUrl } from "../services/s3.service";
-import exifr from "exifr";
-import { buffer } from "node:stream/consumers";
+import { getPresignedUrl } from "../services/s3.service";
 
 async function getTrip(req: Request, res: Response) {
-  const trips = await prisma.trip.findMany({});
-  return res.json(trips);
+  const userId = req.auth().userId;
+  const trips = await prisma.trip.findMany({ where: { userId } });
+
+  // `coverPhotoUrl` may be either a real URL (legacy/manual) or an S3 key.
+  // When it's an S3 key, return a fresh signed URL via `coverViewUrl`.
+  const tripsWithCover = await Promise.all(
+    trips.map(async (trip) => {
+      const cover = trip.coverPhotoUrl;
+      if (!cover) return { ...trip, coverViewUrl: null };
+      if (/^https?:\/\//i.test(cover)) return { ...trip, coverViewUrl: cover };
+      const coverViewUrl = await getPresignedUrl(cover);
+      return { ...trip, coverViewUrl };
+    }),
+  );
+
+  return res.json(tripsWithCover);
 }
 
 async function createTrip(req: Request, res: Response) {
   try {
-    const { userId, name, description, startDate, endDate, coverPhotoUrl } = req.body;
+    const userId = req.auth().userId;
+    const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
     //Basic validation
-    if (!userId || !name || !startDate || !endDate) {
+    if (!name || !startDate || !endDate) {
       return res.status(400).json({
-        message: "Missing required fields: userId, name, startDate, endDate",
+        message: "Missing required fields: name, startDate, endDate",
       });
     }
 
@@ -49,21 +62,53 @@ async function createTrip(req: Request, res: Response) {
   }
 }
 
-
+// Generate new preSignedURL 
 async function getTripById(req: Request, res: Response) {
-  const { id } = req.params;
-  const prismaTrip = await prisma.trip.findUnique({
-    where: { id },
-    include: { photos: true },
-  });
-  if (!prismaTrip) {
-    return res.status(404).json({ message: "Trip not found" });
+  try {
+    const userId = req.auth().userId;
+    const { id } = req.params;
+    const prismaTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: { photos: true },
+    });
+    if (!prismaTrip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+    if (prismaTrip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Generate fresh presigned URLs using stored s3Key (do not persist presigned URLs)
+    const photosWithFreshUrls = await Promise.all(
+      prismaTrip.photos.map(async (photo) => {
+        const viewUrl = await getPresignedUrl(photo.s3Key);
+        return {
+          ...photo,
+          viewUrl,
+        };
+      }),
+    );
+
+    const cover = prismaTrip.coverPhotoUrl;
+    const coverViewUrl =
+      !cover ? null : /^https?:\/\//i.test(cover) ? cover : await getPresignedUrl(cover);
+
+    const tripWithFreshUrls = {
+      ...prismaTrip,
+      coverViewUrl,
+      photos: photosWithFreshUrls,
+    };
+
+    return res.json(tripWithFreshUrls);
+  } catch (error) {
+    console.error("Error fetching trip:", error);
+    return res.status(500).json({ message: "Failed to fetch trip" });
   }
-  return res.json(prismaTrip);
 };
 
 async function updateTripById(req: Request, res: Response) {
   try {
+    const userId = req.auth().userId;
     const { id } = req.params;
     const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
@@ -73,6 +118,9 @@ async function updateTripById(req: Request, res: Response) {
 
     if (!existingTrip) {
       return res.status(404).json({ message: "Trip not found" });
+    }
+    if (existingTrip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     const updateData: any = {};
@@ -96,6 +144,7 @@ async function updateTripById(req: Request, res: Response) {
 
 async function deleteTripById(req: Request, res: Response) {
   try {
+    const userId = req.auth().userId;
     const { id } = req.params;
 
     // Check if trip exists first
@@ -105,6 +154,9 @@ async function deleteTripById(req: Request, res: Response) {
 
     if (!existingTrip) {
       return res.status(404).json({ message: "Trip not found" });
+    }
+    if (existingTrip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     // Delete the trip (use delete() for single record by unique field)
@@ -119,70 +171,4 @@ async function deleteTripById(req: Request, res: Response) {
   }
 }
 
-async function createPhoto(req: Request, res: Response) {
-  if (!req.file) {
-    const contentType = req.headers["content-type"] || "";
-    return res.status(400).json({
-      message: "No file uploaded",
-      hint: "Use form-data with key 'photo' and type File. Content-Type received: " + contentType,
-    });
-  }
-
-  const file = req.file;
-  const tripId = req.params.tripId;
-
-  let takenAt: Date | null = null;
-  let latitude: number | null = null;
-  let longitude: number | null = null;
-
-  try {
-    const exif = await exifr.parse(file.buffer);
-    if (exif) {
-      if (exif.DateTimeOriginal) {
-        const d = new Date(exif.DateTimeOriginal);
-        if (!Number.isNaN(d.getTime())) takenAt = d;
-      }
-      if (exif.latitude != null && !Number.isNaN(Number(exif.latitude))) {
-        latitude = Number(exif.latitude);
-      }
-      if (exif.longitude != null && !Number.isNaN(Number(exif.longitude))) {
-        longitude = Number(exif.longitude);
-      }
-    }
-  } catch (err) {
-    console.error("EXIF parsing failed, continuing without metadata:", err);
-  }
-
-  if (!tripId) {
-    return res.status(404).json({ message: "No tripId found" });
-  }
-
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) return res.status(404).json({ message: "Trip not found" });
-
-  const photoId = crypto.randomUUID();
-  const key = await uploadFile(
-    file.buffer,
-    file.mimetype,
-    trip.userId,
-    tripId,
-    photoId,
-    file.originalname
-  );
-  const url = await getPresignedUrl(key);
-
-  const photo = await prisma.photo.create({
-    data: {
-      id: photoId,
-      tripId,
-      url,
-      takenAt,
-      latitude,
-      longitude,
-      aiTags: [],
-    },
-  });
-
-  return res.status(201).json(photo);
-}
-export { getTrip, createTrip, getTripById, updateTripById, deleteTripById, createPhoto };
+export { getTrip, createTrip, getTripById, updateTripById, deleteTripById };

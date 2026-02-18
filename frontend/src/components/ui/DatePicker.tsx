@@ -11,8 +11,6 @@ import {
     isSameMonth,
     isSameDay,
     isToday,
-    parse,
-    isValid,
 } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -76,7 +74,7 @@ export function DatePicker({
     const [isValidInput, setIsValidInput] = useState(true)
     const inputRef = useRef<HTMLInputElement>(null)
     const calendarRef = useRef<HTMLDivElement>(null)
-    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const previousLengthRef = useRef(0)
 
     // Sync inputValue with external value prop
@@ -168,9 +166,9 @@ export function DatePicker({
         // If user is deleting and hit a slash, remove the preceding digit too
         if (isDeletion) {
             // Check if the deleted character was a slash
-            const cursorWasAtSlash = previousLength > newValue.length && 
-                                     (previousLength === 3 || previousLength === 6)
-            
+            const cursorWasAtSlash = previousLength > newValue.length &&
+                (previousLength === 3 || previousLength === 6)
+
             if (cursorWasAtSlash && newDigits.length === rawValue.length) {
                 // User backspaced over a slash, so also remove the preceding digit
                 const trimmedDigits = newDigits.slice(0, -1)
@@ -197,17 +195,17 @@ export function DatePicker({
     // Helper function to format raw digits into MM/DD/YYYY
     const formatRawValue = (digits: string): string => {
         if (digits.length === 0) return ""
-        
+
         let formatted = digits.slice(0, 2) // MM
-        
+
         if (digits.length >= 3) {
             formatted += "/" + digits.slice(2, 4) // /DD
         }
-        
+
         if (digits.length >= 5) {
             formatted += "/" + digits.slice(4, 8) // /YYYY
         }
-        
+
         return formatted
     }
 
@@ -325,11 +323,11 @@ export function DatePicker({
                                             : "text-[#6b7280] hover:bg-blue-100/5",
                                         // Selected state
                                         isSelected &&
-                                            "bg-app-accent font-semibold text-white hover:bg-app-accent-hover",
+                                        "bg-app-accent font-semibold text-white hover:bg-app-accent-hover",
                                         // Today indicator (only if not selected)
                                         !isSelected &&
-                                            isTodayDate &&
-                                            "border border-app-accent font-semibold"
+                                        isTodayDate &&
+                                        "border border-app-accent font-semibold"
                                     )}
                                 >
                                     {format(day, "d")}

@@ -27,7 +27,7 @@ model User {
 model Trip {
   id            String   @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name          String
   description   String?
   startDate     DateTime
@@ -38,14 +38,15 @@ model Trip {
 }
 
 model Photo {
-  id        String    @id @default(uuid())
-  tripId    String
-  trip      Trip      @relation(fields: [tripId], references: [id])
-  url       String
-  takenAt   DateTime? // EXIF date
-  latitude  Float? // EXIF GPS
-  longitude Float? // EXIF GPS
-  aiTags    String[] // AI landmark tags
-  caption   String?
-  createdAt DateTime  @default(now())
+  id         String    @id @default(uuid())
+  tripId     String
+  trip       Trip      @relation(fields: [tripId], references: [id])
+  s3Key String // added a new storageKey to store the file name in the bucket
+  url        String?
+  takenAt    DateTime? // EXIF date
+  latitude   Float? // EXIF GPS
+  longitude  Float? // EXIF GPS
+  aiTags     String[] // AI landmark tags
+  caption    String?
+  createdAt  DateTime  @default(now())
 }

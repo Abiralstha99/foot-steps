@@ -186,3 +186,23 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 } */
+
+/* Leaflet map marker: tooltip (hover) and popup (click) show photo only */
+.leaflet-tooltip-photo {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.leaflet-tooltip-photo::before {
+  display: none !important;
+}
+.leaflet-popup-photo .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.leaflet-popup-photo .leaflet-popup-content {
+  margin: 0 !important;
+  min-width: 0 !important;
+}

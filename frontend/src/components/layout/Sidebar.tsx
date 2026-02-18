@@ -2,17 +2,16 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import {
     Compass,
-    Globe2,
     Home,
     Map,
     Menu,
-    PlusCircle,
     Settings,
-    User,
 } from "lucide-react"
+import { UserButton, useUser } from "@clerk/clerk-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { CreateTripModal } from "@/features/trips/components/CreateTripForm"
 
 const SIDEBAR_WIDTH = 260
 
@@ -23,16 +22,28 @@ type NavItem = {
 }
 
 const mainNavItems: NavItem[] = [
-    { label: "Home", icon: <Home className="size-4" />, to: "/" },
+    { label: "Home", icon: <Home className="size-4" />, to: "/home" },
     { label: "My Trips", icon: <Map className="size-4" />, to: "/trips" },
-    { label: "Create Trip", icon: <PlusCircle className="size-4" />, to: "/trips/new" },
-    { label: "Explore", icon: <Globe2 className="size-4" />, to: "/explore" },
+    { label: "Explore", icon: <Compass className="size-4" />, to: "/explore" },
 ]
 
 const footerNavItems: NavItem[] = [
     { label: "Settings", icon: <Settings className="size-4" />, to: "/settings" },
-    { label: "Profile", icon: <User className="size-4" />, to: "/profile" },
 ]
+
+function UserInfo() {
+    const { user } = useUser()
+    return (
+        <div className="flex flex-col">
+            <span className="text-xs font-medium text-white">
+                {user?.firstName || "Traveler"}
+            </span>
+            <span className="text-[11px] text-[#9A9C9B]">
+                View profile
+            </span>
+        </div>
+    )
+}
 
 function SidebarNavList({ items }: { items: NavItem[] }) {
     return (
@@ -56,7 +67,14 @@ function SidebarNavList({ items }: { items: NavItem[] }) {
                     <span className="flex items-center justify-center rounded-md bg-[#070807] p-2 text-inherit group-hover:bg-[#1A1A1A]">
                         {item.icon}
                     </span>
-                    <span className="text-inherit">{item.label}</span>
+                    <span className="text-inherit">
+                        {item.label}
+                        {item.label === "Explore" && (
+                            <span className="ml-2 text-xs font-medium text-[#5B5D5C]">
+                                (Coming Soon)
+                            </span>
+                        )}
+                    </span>
                 </NavLink>
             ))
             }
@@ -66,6 +84,7 @@ function SidebarNavList({ items }: { items: NavItem[] }) {
 
 export function Sidebar() {
     const [open, setOpen] = React.useState(false)
+    const [createModalOpen, setCreateModalOpen] = React.useState(false)
 
     return (
         <>
@@ -77,7 +96,7 @@ export function Sidebar() {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-semibold tracking-tight text-white">
-                            TravelJournal
+                            foot-steps
                         </span>
                         <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9A9C9B]">
                             Capture The Journey
@@ -113,7 +132,7 @@ export function Sidebar() {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-semibold tracking-tight text-white">
-                                TravelJournal
+                                foot-steps
                             </span>
                             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9A9C9B]">
                                 Photo Stories
@@ -137,17 +156,16 @@ export function Sidebar() {
                     <div className="space-y-3">
                         <SidebarNavList items={footerNavItems} />
                         <div className="mt-3 flex items-center gap-3">
-                            <div className="flex size-8 items-center justify-center rounded-full bg-[#181818] text-xs font-semibold text-white">
-                                TJ
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-medium text-white">
-                                    Traveler in Focus
-                                </span>
-                                <span className="text-[11px] text-[#9A9C9B]">
-                                    View profile
-                                </span>
-                            </div>
+                            <UserButton
+                                appearance={{
+                                    elements: {
+                                        avatarBox: "size-8",
+                                        userButtonPopoverCard: "bg-[#121212] border border-[#1A1A1A]",
+                                        userButtonPopoverActionButton: "hover:bg-[#1A1A1A]"
+                                    }
+                                }}
+                            />
+                            <UserInfo />
                         </div>
                     </div>
                 </div>
@@ -179,7 +197,7 @@ export function Sidebar() {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-sm font-semibold tracking-tight text-white">
-                                    TravelJournal
+                                    foot-steps
                                 </span>
                                 <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#9A9C9B]">
                                     Photo Stories
@@ -208,22 +226,23 @@ export function Sidebar() {
                     <div className="space-y-3 border-t border-[#1A1A1A] pt-4">
                         <SidebarNavList items={footerNavItems} />
                         <div className="mt-3 flex items-center gap-3">
-                            <div className="flex size-8 items-center justify-center rounded-full bg-[#181818] text-xs font-semibold text-white">
-                                TJ
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-medium text-white">
-                                    Traveler in Focus
-                                </span>
-                                <span className="text-[11px] text-[#9A9C9B]">
-                                    View profile
-                                </span>
-                            </div>
+                            <UserButton
+                                appearance={{
+                                    elements: {
+                                        avatarBox: "size-8",
+                                        userButtonPopoverCard: "bg-[#121212] border border-[#1A1A1A]",
+                                        userButtonPopoverActionButton: "hover:bg-[#1A1A1A]"
+                                    }
+                                }}
+                            />
+                            <UserInfo />
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Create Trip Modal */}
+            <CreateTripModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
         </>
     )
 }
-
