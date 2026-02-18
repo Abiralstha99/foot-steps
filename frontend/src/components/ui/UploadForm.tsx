@@ -7,12 +7,14 @@ type UploadFormProps = {
     tripId: string;
     onClose?: () => void;
     onFilesSelected?: (files: File[]) => void;
+    onUploadComplete?: () => void | Promise<void>;
 };
 
-function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
+function UploadForm({ tripId, onClose, onFilesSelected, onUploadComplete }: UploadFormProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [uploadIds, setUploadIds] = useState<string[]>([]);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
     const { uploadFile } = useUpload();
 
@@ -60,20 +62,44 @@ function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
 
     async function handleUploadClick() {
         const newIds: string[] = [];
+        const uploads: Promise<unknown>[] = [];
+        setUploadError(null);
 
         for (const file of selectedFiles) {
             const uploadId = `upload-${Date.now()}-${file.name}`; // or let useUpload generate
             newIds.push(uploadId);
 
-            // kick off the upload (fire-and-forget, or await if you like)
-            uploadFile({
+            uploads.push(uploadFile({
                 endpoint: `/trips/${tripId}/photos`,
                 file,
                 uploadId, // pass it so Redux knows this id
-            }).catch(console.error);
+            }));
         }
 
         setUploadIds((prev) => [...prev, ...newIds]);
+
+        try {
+            const results = await Promise.allSettled(uploads);
+            const anySuccess = results.some((r) => r.status === "fulfilled");
+            const firstFailure = results.find((r) => r.status === "rejected");
+
+            if (firstFailure && firstFailure.status === "rejected") {
+                const reason: any = firstFailure.reason;
+                const message =
+                    reason?.response?.data?.message ??
+                    reason?.message ??
+                    "One or more uploads failed";
+                setUploadError(String(message));
+                console.error("Upload failed:", reason);
+            }
+
+            if (anySuccess) {
+                await onUploadComplete?.();
+            }
+        } catch (err) {
+            console.error(err);
+            setUploadError("Upload failed");
+        }
     }
 
     return (
@@ -153,6 +179,12 @@ function UploadForm({ tripId, onClose, onFilesSelected }: UploadFormProps) {
                 {/* Upload progress */}
                 {uploadIds.length > 0 && (
                     <CombinedUploadProgress uploadIds={uploadIds} />
+                )}
+
+                {uploadError && (
+                    <div className="mt-4 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                        {uploadError}
+                    </div>
                 )}
 
                 {/* Footer actions */}
