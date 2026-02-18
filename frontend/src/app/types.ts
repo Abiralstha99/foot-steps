@@ -6,6 +6,8 @@ export interface Trip {
   startDate: string;
   endDate: string;
   coverPhotoUrl?: string | null;
+  // Fresh signed URL for viewing the cover (when coverPhotoUrl stores an S3 key).
+  coverViewUrl?: string | null;
   createdAt?: string;
 }
 

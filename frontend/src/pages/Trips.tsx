@@ -113,10 +113,10 @@ export function TripsPage() {
                 className="block"
               >
                 {/* Cover Image */}
-                {trip.coverPhotoUrl ? (
+                {trip.coverViewUrl || trip.coverPhotoUrl ? (
                   <div className="aspect-video w-full overflow-hidden">
                     <img
-                      src={trip.coverPhotoUrl}
+                      src={trip.coverViewUrl ?? trip.coverPhotoUrl ?? ""}
                       alt={trip.name}
                       className="h-full w-full object-cover transition-transform group-hover:scale-105"
                     />

@@ -5,7 +5,20 @@ import { getPresignedUrl } from "../services/s3.service";
 async function getTrip(req: Request, res: Response) {
   const userId = req.auth().userId;
   const trips = await prisma.trip.findMany({ where: { userId } });
-  return res.json(trips);
+
+  // `coverPhotoUrl` may be either a real URL (legacy/manual) or an S3 key.
+  // When it's an S3 key, return a fresh signed URL via `coverViewUrl`.
+  const tripsWithCover = await Promise.all(
+    trips.map(async (trip) => {
+      const cover = trip.coverPhotoUrl;
+      if (!cover) return { ...trip, coverViewUrl: null };
+      if (/^https?:\/\//i.test(cover)) return { ...trip, coverViewUrl: cover };
+      const coverViewUrl = await getPresignedUrl(cover);
+      return { ...trip, coverViewUrl };
+    }),
+  );
+
+  return res.json(tripsWithCover);
 }
 
 async function createTrip(req: Request, res: Response) {
@@ -76,10 +89,16 @@ async function getTripById(req: Request, res: Response) {
       }),
     );
 
+    const cover = prismaTrip.coverPhotoUrl;
+    const coverViewUrl =
+      !cover ? null : /^https?:\/\//i.test(cover) ? cover : await getPresignedUrl(cover);
+
     const tripWithFreshUrls = {
       ...prismaTrip,
+      coverViewUrl,
       photos: photosWithFreshUrls,
     };
+
     return res.json(tripWithFreshUrls);
   } catch (error) {
     console.error("Error fetching trip:", error);
