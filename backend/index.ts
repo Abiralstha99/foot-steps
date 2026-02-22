@@ -6,6 +6,7 @@ import tripRoutes from "./routes/tripRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import photoRoutes from "./routes/photoRoutes";
 import { clerkMiddleware } from '@clerk/express';
+import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,9 +15,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 //Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json());app.use(express.urlencoded({ extended: true }));
 
+app.use(cors({
+  origin: 'https://foot-steps-gamma.vercel.app/home',
+  credentials: true 
+}));
 //Clerk Middleware
 app.use(clerkMiddleware());
 
