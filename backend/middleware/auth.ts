@@ -1,9 +1,19 @@
-import { requireAuth, getAuth } from '@clerk/express'
+import { getAuth } from '@clerk/express'
 import { prisma } from '../lib/prisma'
 import { Request, Response, NextFunction } from 'express'
 
-// Middleware to require authentication
-export const clerkAuth = requireAuth()
+// API-friendly auth middleware: return 401 JSON instead of redirecting.
+export function clerkAuth(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    const auth = getAuth(req)
+    if (!auth.userId) {
+        return res.status(401).json({ message: 'Unauthorized' })
+    }
+    next()
+}
 
 // Middleware to sync user to database on first login
 export async function syncUser(
