@@ -15,11 +15,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 //Middleware
-app.use(express.json());app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); app.use(express.urlencoded({ extended: true }));
 
 app.use(cors({
-  origin: 'https://foot-steps-gamma.vercel.app/home',
-  credentials: true 
+  origin: 'https://foot-steps-gamma.vercel.app',
+  credentials: true
 }));
 //Clerk Middleware
 app.use(clerkMiddleware());
