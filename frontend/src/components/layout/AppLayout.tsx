@@ -3,14 +3,23 @@ import { Sidebar } from "@/components/layout/Sidebar"
 import { Outlet } from "react-router-dom"
 import { useAppDispatch } from "@/app/hooks"
 import { fetchTrips } from "@/features/trips/tripsSlice"
+import { useAuth } from "@clerk/clerk-react"
+import { setAuthToken } from "@/lib/api"
 
 export function AppLayout() {
   const dispatch = useAppDispatch()
+  const { isSignedIn, isLoaded, getToken } = useAuth()
 
-  // Fetch trips when the app loads
+  // Wait for Clerk to load and set token before fetching
   useEffect(() => {
-    dispatch(fetchTrips())
-  }, [dispatch])
+    if (!isLoaded || !isSignedIn) return
+    const init = async () => {
+      const token = await getToken()
+      setAuthToken(token)
+      dispatch(fetchTrips())
+    }
+    init()
+  }, [dispatch, isSignedIn, isLoaded, getToken])
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#070807] text-white font-sans">
