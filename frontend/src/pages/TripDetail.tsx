@@ -13,6 +13,17 @@ import { DatePicker } from "@/components/ui/DatePicker"
 
 type TripWithPhotos = Trip & { photos: Photo[] }
 
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (typeof err === "object" && err !== null) {
+    const responseMsg = (err as { response?: { data?: { message?: string } } }).response?.data
+      ?.message
+    if (typeof responseMsg === "string") return responseMsg
+    const msg = (err as { message?: string }).message
+    if (typeof msg === "string") return msg
+  }
+  return fallback
+}
+
 export function TripDetailPage() {
   const { id: tripId } = useParams<{ id: string }>()
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -114,17 +125,15 @@ export function TripDetailPage() {
       setTrip((prev) =>
         prev
           ? {
-              ...prev,
-              coverPhotoUrl: s3Key,
-              coverViewUrl: coverViewUrl ?? prev.coverViewUrl ?? null,
-            }
+            ...prev,
+            coverPhotoUrl: s3Key,
+            coverViewUrl: coverViewUrl ?? prev.coverViewUrl ?? null,
+          }
           : prev
       )
       setCoverDialogOpen(false)
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ?? err?.message ?? "Failed to update cover photo"
-      setCoverError(message)
+    } catch (err: unknown) {
+      setCoverError(extractErrorMessage(err, "Failed to update cover photo"))
     } finally {
       setIsSavingCover(false)
     }
@@ -140,10 +149,8 @@ export function TripDetailPage() {
         prev ? { ...prev, coverPhotoUrl: null, coverViewUrl: null } : prev
       )
       setCoverDialogOpen(false)
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ?? err?.message ?? "Failed to remove cover photo"
-      setCoverError(message)
+    } catch (err: unknown) {
+      setCoverError(extractErrorMessage(err, "Failed to remove cover photo"))
     } finally {
       setIsSavingCover(false)
     }
@@ -183,9 +190,8 @@ export function TripDetailPage() {
       const updated = res.data as Trip
       setTrip((prev) => (prev ? { ...prev, ...updated, coverViewUrl: prev.coverViewUrl ?? null } : prev))
       setEditDialogOpen(false)
-    } catch (err: any) {
-      const message = err?.response?.data?.message ?? err?.message ?? "Failed to update trip"
-      setEditError(message)
+    } catch (err: unknown) {
+      setEditError(extractErrorMessage(err, "Failed to update trip"))
     } finally {
       setIsSavingEdit(false)
     }
@@ -218,11 +224,9 @@ export function TripDetailPage() {
         const res = await api.get(`/trips/${tripId}`)
         if (cancelled) return
         setTrip(res.data as TripWithPhotos)
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (cancelled) return
-        const message =
-          err?.response?.data?.message ?? err?.message ?? "Failed to load trip"
-        setError(message)
+        setError(extractErrorMessage(err, "Failed to load trip"))
         setTrip(null)
       } finally {
         if (!cancelled) setIsLoading(false)
