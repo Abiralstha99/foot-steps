@@ -74,33 +74,3 @@ Remove containers and database volume:
 ```bash
 docker compose down -v
 ```
-
-## Local Dev Without Docker (Optional)
-
-If you only want PostgreSQL in Docker, run:
-
-```bash
-docker compose up -d postgres
-```
-
-Then run backend/frontend directly:
-
-```bash
-cd backend
-npm install
-npx prisma migrate dev
-npx prisma generate
-npm run dev
-```
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Notes
-
-- Compose sets `VITE_API_PROXY_TARGET=http://backend:3000` for the frontend container.
-- Backend and frontend containers mount local source directories for live editing.
-- Backend scripts: use `npm run dev` for local watch mode, and `npm run server` for single-run startup (used by Docker Compose).
