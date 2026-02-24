@@ -10,7 +10,7 @@ RUN npm ci --omit=dev
 
 COPY . .
 
-RUN npx prisma generate
+RUN DIRECT_URL="file:./dummy.db" DATABASE_URL="file:./dummy.db" npx prisma generate
 
 EXPOSE 3000
 
