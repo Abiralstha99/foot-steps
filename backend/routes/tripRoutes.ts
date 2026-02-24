@@ -3,14 +3,14 @@ import { getTrip, createTrip, getTripById, updateTripById, deleteTripById } from
 import { createPhoto, handlePhotoUpload } from "../controllers/photoController";
 import { clerkAuth, syncUser } from "../middleware/auth";
 import { validate, validateFile } from "../middleware/validate";
-import { createTripSchema, updateTripSchema, tripParamSchema } from "../schemas/tripSchemas";
+import { createTripSchema, updateTripSchema, tripParamSchema, tripIdParamSchema } from "../schemas/tripSchemas";
 
 const tripsRouter = express.Router();
 
 tripsRouter.get("/", clerkAuth, syncUser, getTrip);
 tripsRouter.post("/", clerkAuth, syncUser, validate(createTripSchema), createTrip);
 
-tripsRouter.post("/:tripId/photos", clerkAuth, syncUser, handlePhotoUpload, validateFile, createPhoto);
+tripsRouter.post("/:tripId/photos", clerkAuth, syncUser, handlePhotoUpload, validateFile, validate(tripIdParamSchema), createPhoto);
 
 tripsRouter.get("/:id", clerkAuth, syncUser, validate(tripParamSchema), getTripById);
 tripsRouter.patch("/:id", clerkAuth, syncUser, validate(tripParamSchema), validate(updateTripSchema), updateTripById);
