@@ -26,13 +26,6 @@ async function createTrip(req: Request, res: Response) {
     const userId = req.auth().userId;
     const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
-    //Basic validation
-    if (!name || !startDate || !endDate) {
-      return res.status(400).json({
-        message: "Missing required fields: name, startDate, endDate",
-      });
-    }
-
     const trip = await prisma.trip.create({
       data: {
         userId,
@@ -66,7 +59,7 @@ async function createTrip(req: Request, res: Response) {
 async function getTripById(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
-    const { id } = req.params;
+    const id = req.params.id as string;
     const prismaTrip = await prisma.trip.findUnique({
       where: { id },
       include: { photos: true },
@@ -109,11 +102,12 @@ async function getTripById(req: Request, res: Response) {
 async function updateTripById(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
 
     const existingTrip = await prisma.trip.findUnique({
       where: { id },
+      include: {photos: true}
     });
 
     if (!existingTrip) {
@@ -145,7 +139,7 @@ async function updateTripById(req: Request, res: Response) {
 async function deleteTripById(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     // Check if trip exists first
     const existingTrip = await prisma.trip.findUnique({
