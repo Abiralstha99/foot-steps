@@ -44,3 +44,9 @@ export const createTripSchema = z.object({
 export const updateTripSchema = z.object({
     body: updateTripBody,
 });
+
+export const tripIdParamSchema = z.object({
+  params: z.object({
+    tripId: z.uuid("tripId must be a valid UUID"),
+  }),
+});
