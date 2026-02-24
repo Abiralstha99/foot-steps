@@ -9,22 +9,22 @@ export const tripParamSchema = z.object({
 export const createTripSchema = z.object({
     name: z.string().min(1, "Name is required"),
     description: z.string().optional(),
-    startDate: z.iso.datetime({ message: "startDate must be a valid ISO 8601 date" }),
-    endDate: z.iso.datetime({ message: "endDate must be a valid ISO 8601 date" }),
+    startDate: z.iso.datetime().optional(),
+    endDate: z.iso.datetime().optional(),
     coverPhotoUrl: z.url().optional(),
 }).refine(
-    data => new Date(data.startDate) <= new Date(data.endDate),
-    { message: "startDate must be on or before endDate", path: ["endDate"] }
+  data => !data.startDate || !data.endDate || new Date(data.startDate) <= new Date(data.endDate),
+  { message: "startDate must be on or before endDate", path: ["endDate"] }
 )
 
 
 export const updateTripSchema = z.object({
-        name: z.string().min(1).optional(),
-        description: z.string().optional(),
-        startDate: z.iso.datetime({ message: "startDate must be a valid ISO 8601 date" }),
-        endDate: z.iso.datetime({ message: "endDate must be a valid ISO 8601 date" }),
-        coverPhotoUrl: z.url().optional().or(z.literal("")),
+    name: z.string().min(1).optional(),
+    description: z.string().optional(),
+    startDate: z.iso.datetime().optional(),
+    endDate: z.iso.datetime().optional(),
+    coverPhotoUrl: z.url().optional().or(z.literal("")),
 }).refine(
-    data => new Date(data.startDate) <= new Date(data.endDate),
-    { message: "startDate must be on or before endDate", path: ["endDate"] }
+  data => !data.startDate || !data.endDate || new Date(data.startDate) <= new Date(data.endDate),
+  { message: "startDate must be on or before endDate", path: ["endDate"] }
 )
