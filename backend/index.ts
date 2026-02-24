@@ -39,7 +39,7 @@ if (hasBuiltFrontend) {
   app.use(express.static(frontendDistPath));
 
   // SPA fallback (avoid capturing API routes)
-  app.get("*", (req, res) => {
+  app.get("/{*path}", (req, res) => {
     if (req.path.startsWith("/api")) {
       return res.status(404).json({ message: "Not found" });
     }
