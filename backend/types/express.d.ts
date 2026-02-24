@@ -1,13 +1,4 @@
-declare module "express" {
-  // Local minimal typings to unblock TS in this repo without installing @types/express.
-  // Replace with `npm i -D @types/express` when network access is available.
-  export type Request = any;
-  export type Response = any;
-
-  const express: any;
-  export default express;
-}
-
+// Augments the global Express namespace to add Clerk's auth() method.
 declare global {
   namespace Express {
     interface Auth {
@@ -16,17 +7,25 @@ declare global {
     }
     interface Request {
       auth: () => Auth;
-      [key: string]: any;
-    }
-    interface Response {
-      [key: string]: any;
+      file?: Multer.File;
+      files?: {
+        [fieldname: string]: Multer.File[];
+      } | Multer.File[];
     }
     namespace Multer {
       interface File {
-        [key: string]: any;
+        fieldname: string;
+        originalname: string;
+        encoding: string;
+        mimetype: string;
+        size: number;
+        destination: string;
+        filename: string;
+        path: string;
+        buffer: Buffer;
       }
     }
   }
 }
 
-export {};
+export { };
