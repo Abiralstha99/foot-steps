@@ -47,7 +47,7 @@ async function getAllPhotos(req: Request, res: Response) {
 
 export const updatePhoto = async (req: Request, res: Response) => {
   try {
-    const { photoId } = req.params;
+    const photoId = req.params.photoId as string;
     const { caption } = req.body;
     const userId = req.auth().userId;
 
@@ -91,7 +91,7 @@ export const updatePhoto = async (req: Request, res: Response) => {
 async function getPhotoById(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
-    const { photoId } = req.params;
+    const photoId = req.params.photoId as string;
     const photo = await prisma.photo.findUnique({
       where: { id: photoId },
       include: {
@@ -118,7 +118,7 @@ async function getPhotoById(req: Request, res: Response) {
   }
 }
 
-export async function createPhoto(req: Request, res: Response) {
+async function createPhoto(req: Request, res: Response) {
   if (!req.file) {
     const contentType = req.headers["content-type"] || "";
     return res.status(400).json({
@@ -128,7 +128,7 @@ export async function createPhoto(req: Request, res: Response) {
   }
 
   const file = req.file;
-  const tripId = req.params.tripId;
+  const tripId = req.params.tripId as string;
 
   let takenAt: Date | null = null;
   let latitude: number | null = null;
@@ -188,8 +188,8 @@ export async function createPhoto(req: Request, res: Response) {
   return res.status(201).json({ ...photo, viewUrl, url: viewUrl });
 }
 
-export function handlePhotoUpload(req: Request, res: Response, next: NextFunction) {
-  upload.single("photo")(req, res, (err) => {
+async function handlePhotoUpload(req: Request, res: Response, next: NextFunction) {
+  upload.single("photo")(req, res, (err: Error | null) => {
     if (err) {
       return res.status(400).json({
         message: "Upload failed",
@@ -200,4 +200,4 @@ export function handlePhotoUpload(req: Request, res: Response, next: NextFunctio
   });
 }
 
-export { getAllPhotos, getPhotoById };
+export { getAllPhotos, getPhotoById, createPhoto, handlePhotoUpload };
