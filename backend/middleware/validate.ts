@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodError, ZodSchema } from "zod";
-import { createPhoto } from "../controllers/photoController";
+import { ZodSchema, z } from "zod";
 import { photoFileSchema } from "../schemas/photoSchemas";
 
 export const validate = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    // If body,params or query is missing, zod will handle it as an empty object
     const result = schema.safeParse({
       body: req.body,
       params: req.params,
@@ -13,23 +11,36 @@ export const validate = (schema: ZodSchema) => {
     });
 
     if (!result.success) {
-      const errors = result.error.format();
+      // formatError preserves the full nested path: { body: { name: { _errors: ["..."] } } }
+      // This lets the frontend map errors directly to individual fields.
+      const errors = z.formatError(result.error);
       return res.status(400).json({
         message: "Validation failed",
-        errors: errors.fieldErrors,
+        errors,
       });
     }
-
-    // Overwrite req fields with parsed (coerced/stripped) data
-    Object.assign(req, result.data);
+    const data = result.data as {
+      body?: unknown;
+      params?: Record<string, string>;
+      query?: Record<string, any>;
+    };
+    if (data.body !== undefined) req.body = data.body;
+    if (data.query !== undefined) req.query = data.query;
+    if (data.params !== undefined) Object.assign(req.params, data.params);
     next();
   };
 };
 
 export const validateFile = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "File is required" });
+  }
+
   const result = photoFileSchema.safeParse({ file: req.file });
   if (!result.success) {
-    return res.status(400).json({ message: "Invalid file", errors: result.error.format() });
+    const { fieldErrors } = z.flattenError(result.error);
+    return res.status(400).json({ message: "Invalid file", errors: fieldErrors });
   }
+
   next();
 };
