@@ -18,7 +18,8 @@ const __dirname = path.dirname(__filename);
 app.use(express.json()); app.use(express.urlencoded({ extended: true }));
 
 app.use(cors({
-  origin: 'https://foot-steps-gamma.vercel.app',
+  origin: ['https://get-footsteps.vercel.app/',
+    'http://localhost:5173'],
   credentials: true
 }));
 //Clerk Middleware

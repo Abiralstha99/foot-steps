@@ -3,22 +3,26 @@ import { Request, Response } from "express";
 import { getPresignedUrl } from "../services/s3.service";
 
 async function getTrip(req: Request, res: Response) {
-  const userId = req.auth().userId;
-  const trips = await prisma.trip.findMany({ where: { userId } });
+  try {
+    const userId = req.auth().userId;
+    const trips = await prisma.trip.findMany({ where: { userId } });
+    // `coverPhotoUrl` may be either a real URL (legacy/manual) or an S3 key.
+    // When it's an S3 key, return a fresh signed URL via `coverViewUrl`.
+    const tripsWithCover = await Promise.all(
+      trips.map(async (trip) => {
+        const cover = trip.coverPhotoUrl;
+        if (!cover) return { ...trip, coverViewUrl: null };
+        if (/^https?:\/\//i.test(cover)) return { ...trip, coverViewUrl: cover };
+        const coverViewUrl = await getPresignedUrl(cover);
+        return { ...trip, coverViewUrl };
+      }),
+    );
 
-  // `coverPhotoUrl` may be either a real URL (legacy/manual) or an S3 key.
-  // When it's an S3 key, return a fresh signed URL via `coverViewUrl`.
-  const tripsWithCover = await Promise.all(
-    trips.map(async (trip) => {
-      const cover = trip.coverPhotoUrl;
-      if (!cover) return { ...trip, coverViewUrl: null };
-      if (/^https?:\/\//i.test(cover)) return { ...trip, coverViewUrl: cover };
-      const coverViewUrl = await getPresignedUrl(cover);
-      return { ...trip, coverViewUrl };
-    }),
-  );
-
-  return res.json(tripsWithCover);
+    return res.json(tripsWithCover);
+  } catch (error) {
+    console.error("Error fetching trips:", error);
+    return res.status(500).json({ message: "Failed to fetch trips" });
+  }
 }
 
 async function createTrip(req: Request, res: Response) {
@@ -107,7 +111,7 @@ async function updateTripById(req: Request, res: Response) {
 
     const existingTrip = await prisma.trip.findUnique({
       where: { id },
-      include: {photos: true}
+      include: { photos: true }
     });
 
     if (!existingTrip) {

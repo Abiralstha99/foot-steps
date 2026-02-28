@@ -10,7 +10,11 @@ const bucket = process.env.S3_BUCKET;
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 
-const DEFAULT_VIEW_URL_EXPIRES_IN = 900; // 15 minutes
+const DEFAULT_VIEW_URL_EXPIRES_IN = 3600; // 1 hour
+
+if (!region || !bucket || !accessKeyId || !secretAccessKey) {
+  throw new Error("Missing required AWS environment variables");
+}
 
 const s3Client = new S3Client({
   region: region,
