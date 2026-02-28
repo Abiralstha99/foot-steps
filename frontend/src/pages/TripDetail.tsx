@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
-import TripHeader from "@/features/trips/components/TripHeader"
+import { Loader2 } from "lucide-react"
+
+import { TripHeroBanner } from "@/features/trips/components/TripHeroBanner"
+import { TripTabBar, type TripTab } from "@/features/trips/components/TripTabBar"
+import { UploadFAB } from "@/features/trips/components/UploadFAB"
+import { EditTripModal } from "@/features/trips/components/EditTripForm"
 import UploadForm from "@/components/ui/UploadForm"
-import api from "@/lib/api"
-import type { Photo, Trip } from "@/app/types"
 import { PhotoGrid } from "@/features/photos/components/PhotoGrid"
 import { PhotoModal } from "@/features/photos/components/PhotoModal"
-import { useUpdatePhoto } from "@/features/photos/usePhotos"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { DatePicker } from "@/components/ui/DatePicker"
+import { useUpdatePhoto } from "@/features/photos/usePhotos"
+import api from "@/lib/api"
+import type { Photo, Trip } from "@/app/types"
 
 type TripWithPhotos = Trip & { photos: Photo[] }
 
@@ -26,9 +30,10 @@ function extractErrorMessage(err: unknown, fallback: string): string {
 
 export function TripDetailPage() {
   const { id: tripId } = useParams<{ id: string }>()
+  const [activeTab, setActiveTab] = useState<TripTab>("grid")
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [coverDialogOpen, setCoverDialogOpen] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [trip, setTrip] = useState<TripWithPhotos | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -37,43 +42,11 @@ export function TripDetailPage() {
   const [coverProgress, setCoverProgress] = useState(0)
   const [coverError, setCoverError] = useState<string | null>(null)
   const [isSavingCover, setIsSavingCover] = useState(false)
-  const [editError, setEditError] = useState<string | null>(null)
-  const [isSavingEdit, setIsSavingEdit] = useState(false)
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    startDate: "",
-    endDate: "",
-  })
   const { updatePhotoCaption } = useUpdatePhoto()
 
-  const toMmDdYyyy = (value?: string | null) => {
-    if (!value) return ""
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return ""
-    const mm = String(date.getMonth() + 1).padStart(2, "0")
-    const dd = String(date.getDate()).padStart(2, "0")
-    const yyyy = date.getFullYear()
-    return `${mm}/${dd}/${yyyy}`
-  }
-
-  const parseMmDdYyyy = (value: string) => {
-    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim())
-    if (!match) return null
-    const [, mm, dd, yyyy] = match
-    const month = Number(mm) - 1
-    const day = Number(dd)
-    const year = Number(yyyy)
-    const d = new Date(year, month, day)
-    if (Number.isNaN(d.getTime())) return null
-    if (d.getMonth() !== month || d.getDate() !== day || d.getFullYear() !== year) return null
-    return d
-  }
-
-  const toIsoDate = (value: string) => {
-    const d = parseMmDdYyyy(value)
-    if (!d) return null
-    return d.toISOString().slice(0, 10)
+  const refreshTrip = async (id: string) => {
+    const res = await api.get(`/trips/${id}`)
+    setTrip(res.data as TripWithPhotos)
   }
 
   const openCoverDialog = () => {
@@ -81,18 +54,6 @@ export function TripDetailPage() {
     setCoverProgress(0)
     setCoverError(null)
     setCoverDialogOpen(true)
-  }
-
-  const openEditDialog = () => {
-    if (!trip) return
-    setEditForm({
-      name: trip.name ?? "",
-      description: trip.description ?? "",
-      startDate: toMmDdYyyy(trip.startDate),
-      endDate: toMmDdYyyy(trip.endDate),
-    })
-    setEditError(null)
-    setEditDialogOpen(true)
   }
 
   const handleSaveCover = async () => {
@@ -121,14 +82,9 @@ export function TripDetailPage() {
       if (!s3Key) throw new Error("No s3Key returned from upload")
 
       await api.patch(`/trips/${trip.id}`, { coverPhotoUrl: s3Key })
-
       setTrip((prev) =>
         prev
-          ? {
-            ...prev,
-            coverPhotoUrl: s3Key,
-            coverViewUrl: coverViewUrl ?? prev.coverViewUrl ?? null,
-          }
+          ? { ...prev, coverPhotoUrl: s3Key, coverViewUrl: coverViewUrl ?? prev.coverViewUrl ?? null }
           : prev
       )
       setCoverDialogOpen(false)
@@ -145,55 +101,12 @@ export function TripDetailPage() {
     setCoverError(null)
     try {
       await api.patch(`/trips/${trip.id}`, { coverPhotoUrl: null })
-      setTrip((prev) =>
-        prev ? { ...prev, coverPhotoUrl: null, coverViewUrl: null } : prev
-      )
+      setTrip((prev) => (prev ? { ...prev, coverPhotoUrl: null, coverViewUrl: null } : prev))
       setCoverDialogOpen(false)
     } catch (err: unknown) {
       setCoverError(extractErrorMessage(err, "Failed to remove cover photo"))
     } finally {
       setIsSavingCover(false)
-    }
-  }
-
-  const handleSaveEdit = async () => {
-    if (!trip) return
-    if (!editForm.name.trim()) {
-      setEditError("Trip name is required.")
-      return
-    }
-    if (!editForm.startDate || !editForm.endDate) {
-      setEditError("Start date and end date are required.")
-      return
-    }
-    const startIso = toIsoDate(editForm.startDate)
-    const endIso = toIsoDate(editForm.endDate)
-    if (!startIso || !endIso) {
-      setEditError("Please enter valid dates.")
-      return
-    }
-    if (new Date(startIso) > new Date(endIso)) {
-      setEditError("End date must be on or after start date.")
-      return
-    }
-
-    setIsSavingEdit(true)
-    setEditError(null)
-    try {
-      const payload = {
-        name: editForm.name.trim(),
-        description: editForm.description.trim() || null,
-        startDate: startIso,
-        endDate: endIso,
-      }
-      const res = await api.patch(`/trips/${trip.id}`, payload)
-      const updated = res.data as Trip
-      setTrip((prev) => (prev ? { ...prev, ...updated, coverViewUrl: prev.coverViewUrl ?? null } : prev))
-      setEditDialogOpen(false)
-    } catch (err: unknown) {
-      setEditError(extractErrorMessage(err, "Failed to update trip"))
-    } finally {
-      setIsSavingEdit(false)
     }
   }
 
@@ -207,11 +120,6 @@ export function TripDetailPage() {
       if (coverPreviewSrc) URL.revokeObjectURL(coverPreviewSrc)
     }
   }, [coverPreviewSrc])
-
-  const refreshTrip = async (id: string) => {
-    const res = await api.get(`/trips/${id}`)
-    setTrip(res.data as TripWithPhotos)
-  }
 
   useEffect(() => {
     if (!tripId) return
@@ -241,51 +149,66 @@ export function TripDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A]">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-center h-96">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
-          </div>
-        </div>
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-accent" />
       </div>
     )
   }
 
   if (error || !trip) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A]">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <h1 className="text-2xl font-semibold text-white">Trip not found</h1>
-          <p className="mt-2 text-sm text-[#9A9C9B]">
-            {error ? `Error: ${error}` : "We couldn't find that trip."}
-          </p>
-        </div>
+      <div className="py-12">
+        <h1 className="font-display text-heading text-text-primary">Trip not found</h1>
+        <p className="mt-2 text-body text-text-muted">
+          {error ? `Error: ${error}` : "We couldn't find that trip."}
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      <TripHeader
-        trip={{
-          title: trip.name,
-          location: trip.description || "Location not specified",
-          startDate: trip.startDate,
-          endDate: trip.endDate,
-        }}
-        onUploadPhotos={() => setUploadOpen(true)}
-        onChangeCover={openCoverDialog}
-        onEdit={openEditDialog}
-      />
-
-      <div className="relative max-w-7xl mx-auto px-6 py-8">
-        <PhotoGrid
-          photos={trip.photos ?? []}
-          isLoading={isLoading}
-          onPhotoClick={(photo) => setSelectedPhoto(photo)}
+    <div>
+      {/* Hero — break out of AppLayout's px-6 py-8 to bleed to container edges */}
+      <div className="-mx-6 -mt-8">
+        <TripHeroBanner
+          trip={trip}
+          photoCount={trip.photos?.length}
+          onEdit={() => setEditOpen(true)}
+          onShare={() => {}}
+          onChangeCover={openCoverDialog}
         />
       </div>
 
+      {/* Tab bar — full width with bottom border */}
+      <div className="-mx-6">
+        <TripTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+
+      {/* Tab content */}
+      <div className="mt-6">
+        {activeTab === "grid" && (
+          <PhotoGrid
+            photos={trip.photos ?? []}
+            isLoading={false}
+            onPhotoClick={(photo) => setSelectedPhoto(photo)}
+          />
+        )}
+        {activeTab === "timeline" && (
+          <div className="py-16 text-center text-body text-text-muted">
+            Timeline view is coming soon.
+          </div>
+        )}
+        {activeTab === "map" && (
+          <div className="py-16 text-center text-body text-text-muted">
+            Map view is coming soon.
+          </div>
+        )}
+      </div>
+
+      {/* Upload FAB */}
+      <UploadFAB onClick={() => setUploadOpen(true)} />
+
+      {/* Photo viewer */}
       <PhotoModal
         photo={selectedPhoto}
         open={!!selectedPhoto}
@@ -295,6 +218,7 @@ export function TripDetailPage() {
         onUpdateCaption={updatePhotoCaption}
       />
 
+      {/* Upload form */}
       {uploadOpen && tripId && (
         <UploadForm
           tripId={tripId}
@@ -306,29 +230,40 @@ export function TripDetailPage() {
         />
       )}
 
+      {/* Edit trip modal */}
+      {editOpen && (
+        <EditTripModal
+          trip={trip}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSuccess={() => tripId && refreshTrip(tripId)}
+        />
+      )}
+
+      {/* Cover photo dialog */}
       <Dialog open={coverDialogOpen} onOpenChange={setCoverDialogOpen}>
-        <DialogContent className="max-w-md border-[#2d302e] bg-[#0d0e0d] p-0">
-          <div className="border-b border-[#2d302e] px-6 py-4">
-            <DialogTitle className="text-white">Change cover photo</DialogTitle>
+        <DialogContent className="max-w-md p-0">
+          <div className="border-b border-border-token px-6 py-4">
+            <DialogTitle className="font-display text-subheading font-semibold text-text-primary">
+              Change cover photo
+            </DialogTitle>
           </div>
-          <div className="space-y-4 px-6 py-4">
-            <div>
-              <input
-                id="cover-file"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null
-                  setCoverFile(file)
-                  setCoverError(null)
-                  setCoverProgress(0)
-                }}
-                className="block w-full cursor-pointer rounded-md border border-[#2d302e] bg-[#090a09] px-3 py-2 text-sm text-[#9A9C9B] file:mr-3 file:rounded file:border-0 file:bg-[#3C4741] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-[#4a5a52]"
-              />
-            </div>
+          <div className="space-y-4 px-6 py-5">
+            <input
+              id="cover-file"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setCoverFile(file)
+                setCoverError(null)
+                setCoverProgress(0)
+              }}
+              className="block w-full cursor-pointer rounded border border-border-token bg-bg-base px-3 py-2 text-sm text-text-secondary file:mr-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover"
+            />
 
             {(coverPreviewSrc || trip.coverViewUrl) && (
-              <div className="overflow-hidden rounded-lg border border-white/10 bg-black/30">
+              <div className="overflow-hidden rounded-lg border border-border-token">
                 <img
                   src={coverPreviewSrc ?? trip.coverViewUrl ?? ""}
                   alt="Cover preview"
@@ -339,13 +274,13 @@ export function TripDetailPage() {
 
             {isSavingCover && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-[#9A9C9B]">
+                <div className="flex items-center justify-between text-xs text-text-muted">
                   <span>Uploading...</span>
                   <span>{coverProgress}%</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1b1a]">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-bg-raised">
                   <div
-                    className="h-full bg-[#3C4741] transition-[width] duration-300"
+                    className="h-full bg-accent transition-[width] duration-300"
                     style={{ width: `${coverProgress}%` }}
                   />
                 </div>
@@ -353,110 +288,25 @@ export function TripDetailPage() {
             )}
 
             {coverError && (
-              <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{coverError}</p>
+              <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-400">{coverError}</p>
             )}
-            <div className="flex justify-end gap-2 border-t border-[#2d302e] pt-4">
+
+            <div className="flex justify-end gap-2 border-t border-border-token pt-4">
               <Button
-                type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={handleRemoveCover}
                 disabled={isSavingCover}
-                className="border-[#2d302e] bg-transparent text-[#9A9C9B] hover:bg-[#1a1b1a] hover:text-white"
               >
                 Remove
               </Button>
               <Button
-                type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => setCoverDialogOpen(false)}
-                className="border-[#2d302e] bg-transparent text-[#9A9C9B] hover:bg-[#1a1b1a] hover:text-white"
               >
                 Cancel
               </Button>
-              <Button
-                type="button"
-                onClick={handleSaveCover}
-                disabled={isSavingCover}
-                className="bg-[#3C4741] text-white hover:bg-[#4a5a52]"
-              >
+              <Button onClick={handleSaveCover} disabled={isSavingCover}>
                 {isSavingCover ? "Uploading..." : "Upload & set cover"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md border-[#2d302e] bg-[#0d0e0d] p-0">
-          <div className="border-b border-[#2d302e] px-6 py-4">
-            <DialogTitle className="text-white">Edit trip</DialogTitle>
-          </div>
-          <div className="space-y-4 px-6 py-4">
-            <div>
-              <label htmlFor="trip-name" className="mb-1 block text-sm font-medium text-[#9A9C9B]">
-                Trip name
-              </label>
-              <input
-                id="trip-name"
-                type="text"
-                value={editForm.name}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                className="w-full rounded-md border border-[#2d302e] bg-[#090a09] px-3 py-2 text-sm text-white placeholder:text-[#6b7280] focus:border-[#3C4741] focus:outline-none focus:ring-1 focus:ring-[#3C4741]"
-              />
-            </div>
-            <div>
-              <label htmlFor="trip-description" className="mb-1 block text-sm font-medium text-[#9A9C9B]">
-                Location / description
-              </label>
-              <input
-                id="trip-description"
-                type="text"
-                value={editForm.description}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
-                className="w-full rounded-md border border-[#2d302e] bg-[#090a09] px-3 py-2 text-sm text-white placeholder:text-[#6b7280] focus:border-[#3C4741] focus:outline-none focus:ring-1 focus:ring-[#3C4741]"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[#9A9C9B]">
-                  Start date
-                </label>
-                <DatePicker
-                  value={editForm.startDate}
-                  onChange={(value) => setEditForm((prev) => ({ ...prev, startDate: value }))}
-                  placeholder="MM/DD/YYYY"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[#9A9C9B]">
-                  End date
-                </label>
-                <DatePicker
-                  value={editForm.endDate}
-                  onChange={(value) => setEditForm((prev) => ({ ...prev, endDate: value }))}
-                  placeholder="MM/DD/YYYY"
-                />
-              </div>
-            </div>
-            {editError && (
-              <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{editError}</p>
-            )}
-            <div className="flex justify-end gap-2 border-t border-[#2d302e] pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditDialogOpen(false)}
-                className="border-[#2d302e] bg-transparent text-[#9A9C9B] hover:bg-[#1a1b1a] hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={isSavingEdit}
-                className="bg-[#3C4741] text-white hover:bg-[#4a5a52]"
-              >
-                {isSavingEdit ? "Saving..." : "Save changes"}
               </Button>
             </div>
           </div>

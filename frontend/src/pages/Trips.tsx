@@ -1,161 +1,142 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
+import { Calendar, Images, Loader2, MapPin, Plus } from "lucide-react"
+
 import { CreateTripModal } from "@/features/trips/components/CreateTripForm"
+import { TripCard } from "@/features/trips/components/TripCard"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu } from "@/components/ui/DropdownMenu"
-import UploadForm from "@/components/ui/UploadForm"
+import { EmptyState } from "@/components/ui/EmptyState"
+import { SuitcaseIllustration } from "@/components/illustrations/SuitcaseIllustration"
 import { useTrips } from "@/features/trips/useTrips"
-import { Loader2, MapPin, Calendar, Plus, Upload, Edit, Image } from "lucide-react"
+import type { Trip } from "@/app/types"
+
+function formatDateRange(startDate: string, endDate: string): string {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+  return `${fmt.format(new Date(startDate))} – ${fmt.format(new Date(endDate))}`
+}
+
+function HeroCard({ trip }: { trip: Trip }) {
+  const cover = trip.coverViewUrl ?? trip.coverPhotoUrl
+
+  return (
+    <div className="relative h-[40vh] max-h-[400px] w-full overflow-hidden rounded-lg">
+      {/* Blurred background */}
+      {cover ? (
+        <img
+          src={cover}
+          alt={trip.name}
+          className="absolute inset-0 h-full w-full object-cover blur-sm brightness-75"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-bg-raised to-bg-surface" />
+      )}
+
+      {/* Frosted glass card */}
+      <div className="absolute inset-0 flex items-center justify-center p-6">
+        <div className="w-full max-w-lg rounded-xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md dark:bg-black/20">
+          <h2 className="font-display text-title text-white drop-shadow-sm line-clamp-2">
+            {trip.name}
+          </h2>
+
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-body text-white/80">
+            {trip.location && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="size-4 shrink-0" />
+                {trip.location}
+              </span>
+            )}
+            <span className="flex items-center gap-1.5">
+              <Calendar className="size-4 shrink-0" />
+              {formatDateRange(trip.startDate, trip.endDate)}
+            </span>
+            {trip._count != null && (
+              <span className="flex items-center gap-1.5">
+                <Images className="size-4 shrink-0" />
+                {trip._count.photos} photos
+              </span>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <Button asChild variant="primary">
+              <Link to={`/trips/${trip.id}`}>View Trip →</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function TripsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [uploadTripId, setUploadTripId] = useState<string | null>(null)
   const { trips, loading, error } = useTrips()
 
+  const sortedTrips = [...trips].sort(
+    (a, b) =>
+      new Date(b.createdAt ?? b.startDate).getTime() -
+      new Date(a.createdAt ?? a.startDate).getTime()
+  )
+  const heroTrip = sortedTrips[0] ?? null
+  const gridTrips = sortedTrips.slice(1)
+
   return (
-    <div className="space-y-6 pt-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">My Trips</h1>
-          <p className="text-[#9A9C9B]">
-            {loading ? "Loading trips..." : `${trips.length} trip${trips.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-        <Button
-          onClick={() => setCreateModalOpen(true)}
-          variant="outline"
-          size="icon"
-          className="border-white/10 bg-black/20 text-white hover:bg-white/5 hover:text-[#3C4741] hover:scale-110 transition"
-          aria-label="Create trip"
-        >
-          <Plus className="h-5 w-5" />
+    <div className="space-y-8 pt-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-heading text-text-primary">My Trips</h1>
+        <Button variant="primary" onClick={() => setCreateModalOpen(true)}>
+          <Plus className="size-4" />
+          New Trip
         </Button>
       </div>
 
-      {/* Loading State */}
+      {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#3C4741]" />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="size-8 animate-spin text-accent" />
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error */}
       {error && !loading && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
-          <p className="text-sm">Failed to load trips: {error}</p>
+        <div className="rounded border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+          Failed to load trips: {error}
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty state */}
       {!loading && !error && trips.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <MapPin className="h-12 w-12 text-[#9A9C9B] mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No trips yet</h3>
-          <p className="text-[#9A9C9B] mb-4">Create your first trip to get started</p>
-          <Button
-            onClick={() => setCreateModalOpen(true)}
-            className="bg-app-accent text-white hover:bg-app-accent-hover"
-          >
-            Create your first trip
-          </Button>
-        </div>
-      )}
-
-      {/* Trips Grid */}
-      {!loading && !error && trips.length > 0 && (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {trips.map((trip) => (
-            <div
-              key={trip.id}
-              className="group relative overflow-hidden rounded-lg border border-white/10 bg-[#1A1A1A] transition-all hover:border-[#3C4741] hover:shadow-lg"
-            >
-              {/* Action Buttons - Overlay */}
-              <div className="absolute top-2 right-2 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setUploadTripId(trip.id)
-                  }}
-                  size="icon-sm"
-                  className="h-8 w-8 rounded-md bg-[#0d0e0d]/90 backdrop-blur-sm border border-[#2d302e] text-white hover:bg-app-accent hover:border-app-accent"
-                  aria-label="Upload photos"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                </Button>
-                <DropdownMenu
-                  items={[
-                    {
-                      label: "Edit",
-                      icon: <Edit className="h-4 w-4" />,
-                      onClick: () => {
-                        // TODO: Open edit modal or navigate to edit page
-                        console.log("Edit trip:", trip.id)
-                      },
-                    },
-                    {
-                      label: "Change Cover",
-                      icon: <Image className="h-4 w-4" />,
-                      onClick: () => {
-                        // TODO: Open cover photo selector
-                        console.log("Change cover for trip:", trip.id)
-                      },
-                    },
-                  ]}
-                  className="bg-[#0d0e0d]/90 backdrop-blur-sm border border-[#2d302e] rounded-md"
-                />
-              </div>
-
-              {/* Clickable Link Area */}
-              <Link
-                to={`/trips/${trip.id}`}
-                className="block"
-              >
-                {/* Cover Image */}
-                {trip.coverViewUrl || trip.coverPhotoUrl ? (
-                  <div className="aspect-video w-full overflow-hidden">
-                    <img
-                      src={trip.coverViewUrl ?? trip.coverPhotoUrl ?? ""}
-                      alt={trip.name}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-video w-full bg-gradient-to-br from-[#3C4741]/20 to-[#1A1A1A] flex items-center justify-center">
-                    <MapPin className="h-12 w-12 text-[#3C4741]/40" />
-                  </div>
-                )}
-
-                {/* Trip Info */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white mb-2 line-clamp-1">
-                    {trip.name}
-                  </h3>
-                  {trip.description && (
-                    <p className="text-sm text-[#9A9C9B] mb-3 line-clamp-2">
-                      {trip.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 text-xs text-[#9A9C9B]">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>
-                      {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Upload Form Modal */}
-      {uploadTripId && (
-        <UploadForm
-          tripId={uploadTripId}
-          onClose={() => setUploadTripId(null)}
+        <EmptyState
+          illustration={<SuitcaseIllustration />}
+          headline="Your adventures start here"
+          subline="Create your first trip to start collecting memories."
+          action={
+            <Button variant="primary" onClick={() => setCreateModalOpen(true)}>
+              <Plus className="size-4" />
+              Create your first trip
+            </Button>
+          }
         />
+      )}
+
+      {/* Hero + grid */}
+      {!loading && !error && heroTrip && (
+        <>
+          <HeroCard trip={heroTrip} />
+
+          {gridTrips.length > 0 && (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {gridTrips.map((trip) => (
+                <TripCard key={trip.id} trip={trip} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <CreateTripModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
