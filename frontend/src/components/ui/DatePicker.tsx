@@ -238,11 +238,11 @@ export function DatePicker({
     const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
     const inputClass = cn(
-        "w-full rounded-md border px-3 py-2 text-sm text-white placeholder:text-[#6b7280] focus:outline-none focus:ring-1 transition-colors",
+        "w-full rounded-md border px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 transition-colors",
         disabled && "cursor-not-allowed opacity-50",
         !isValidInput && inputValue.length >= 10
             ? "border-red-500 bg-red-500/10 focus:border-red-500 focus:ring-red-500"
-            : "border-[#2d302e] bg-[#0d0e0d] focus:border-app-accent focus:ring-app-accent",
+            : "border-border-token bg-bg-surface focus:border-accent focus:ring-accent",
         className
     )
 
@@ -266,25 +266,25 @@ export function DatePicker({
             {isOpen && (
                 <div
                     ref={calendarRef}
-                    className="absolute left-0 top-full z-50 mt-2 w-80 rounded-lg border border-[#2d302e] bg-[#0d0e0d] p-4 shadow-xl"
+                    className="absolute left-0 top-full z-50 mt-2 w-80 rounded-lg border border-border-token bg-bg-surface p-4 shadow-xl"
                 >
                     {/* Month/Year Header */}
                     <div className="mb-4 flex items-center justify-between">
                         <button
                             type="button"
                             onClick={previousMonth}
-                            className="rounded-md p-1 text-white hover:bg-[#1a1b1a] focus:outline-none focus:ring-2 focus:ring-app-accent"
+                            className="rounded-md p-1 text-text-primary hover:bg-bg-raised focus:outline-none focus:ring-2 focus:ring-accent"
                             aria-label="Previous month"
                         >
                             <ChevronLeft className="h-5 w-5" />
                         </button>
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-text-primary">
                             {format(currentMonth, "MMMM yyyy")}
                         </span>
                         <button
                             type="button"
                             onClick={nextMonth}
-                            className="rounded-md p-1 text-white hover:bg-[#1a1b1a] focus:outline-none focus:ring-2 focus:ring-app-accent"
+                            className="rounded-md p-1 text-text-primary hover:bg-bg-raised focus:outline-none focus:ring-2 focus:ring-accent"
                             aria-label="Next month"
                         >
                             <ChevronRight className="h-5 w-5" />
@@ -296,7 +296,7 @@ export function DatePicker({
                         {weekDays.map((day) => (
                             <div
                                 key={day}
-                                className="flex h-8 items-center justify-center text-xs font-medium text-[#9A9C9B]"
+                                className="flex h-8 items-center justify-center text-xs font-medium text-text-muted"
                             >
                                 {day}
                             </div>
@@ -316,18 +316,18 @@ export function DatePicker({
                                     type="button"
                                     onClick={() => handleDayClick(day)}
                                     className={cn(
-                                        "flex h-8 w-full items-center justify-center rounded-md text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-app-accent focus:ring-offset-1 focus:ring-offset-[#0d0e0d]",
+                                        "flex h-8 w-full items-center justify-center rounded-md text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 focus:ring-offset-bg-surface",
                                         // Default state
                                         isCurrentMonth
-                                            ? "text-white hover:bg-blue-100/10"
-                                            : "text-[#6b7280] hover:bg-blue-100/5",
+                                            ? "text-text-primary hover:bg-bg-raised"
+                                            : "text-text-muted hover:bg-bg-raised/50",
                                         // Selected state
                                         isSelected &&
-                                        "bg-app-accent font-semibold text-white hover:bg-app-accent-hover",
+                                        "bg-accent font-semibold text-white hover:bg-accent-hover",
                                         // Today indicator (only if not selected)
                                         !isSelected &&
                                         isTodayDate &&
-                                        "border border-app-accent font-semibold"
+                                        "border border-accent font-semibold"
                                     )}
                                 >
                                     {format(day, "d")}
@@ -337,11 +337,11 @@ export function DatePicker({
                     </div>
 
                     {/* Today button */}
-                    <div className="mt-3 border-t border-[#2d302e] pt-3">
+                    <div className="mt-3 border-t border-border-token pt-3">
                         <button
                             type="button"
                             onClick={() => handleDayClick(new Date())}
-                            className="w-full rounded-md px-3 py-1.5 text-sm text-[#9A9C9B] hover:bg-[#1a1b1a] hover:text-white focus:outline-none focus:ring-2 focus:ring-app-accent"
+                            className="w-full rounded-md px-3 py-1.5 text-sm text-text-muted hover:bg-bg-raised hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                         >
                             Today
                         </button>

@@ -73,7 +73,7 @@ function DialogContent({ className, children, ...props }: DialogContentProps) {
         aria-modal="true"
         tabIndex={-1}
         className={cn(
-          "relative z-10 w-full rounded-xl border border-white/10 bg-black text-white shadow-2xl outline-none",
+          "relative z-10 w-full rounded-xl border border-border-token bg-bg-surface text-text-primary shadow-2xl outline-none",
           className
         )}
         {...props}
