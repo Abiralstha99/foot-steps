@@ -1,3 +1,6 @@
 docs/
 node_modules/
 .env
+prd.md
+designdoc.md
+plan.md
