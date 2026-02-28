@@ -3,6 +3,9 @@ import { createRoot } from "react-dom/client"
 import { BrowserRouter } from "react-router-dom"
 import "./index.css"
 import App from "./App.tsx"
+import { initTheme } from "./lib/theme.ts"
+
+initTheme()
 import { store } from "./app/store.ts"
 import { Provider } from "react-redux"
 import { ClerkProvider} from '@clerk/clerk-react'
