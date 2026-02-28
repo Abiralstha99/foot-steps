@@ -1,42 +1,43 @@
 import { useState } from "react"
-import { useUser } from "@clerk/clerk-react"
 import { MapPin } from "lucide-react"
-import { useCreateTrip } from "@/features/trips/useTrips"
+import { useUpdateTrip } from "@/features/trips/useTrips"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DatePicker } from "@/components/ui/DatePicker"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
+import type { Trip } from "@/app/types"
 
-type CreateTripModalProps = {
+type EditTripModalProps = {
+    trip: Trip
     open: boolean
     onOpenChange: (open: boolean) => void
+    onSuccess?: () => void
 }
 
-export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
-    const { user } = useUser()
-    const { createTrip, loading: isSubmitting, error: tripError } = useCreateTrip()
+/** Convert an ISO date string or YYYY-MM-DD to MM/DD/YYYY for the DatePicker. */
+function toMMDDYYYY(dateStr: string): string {
+    if (!dateStr) return ""
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return dateStr
+    const mm = String(date.getUTCMonth() + 1).padStart(2, "0")
+    const dd = String(date.getUTCDate()).padStart(2, "0")
+    const yyyy = date.getUTCFullYear()
+    return `${mm}/${dd}/${yyyy}`
+}
+
+export function EditTripModal({ trip, open, onOpenChange, onSuccess }: EditTripModalProps) {
+    const { updateTrip, loading: isSubmitting, error: tripError } = useUpdateTrip()
     const [error, setError] = useState<string | null>(null)
     const [form, setForm] = useState({
-        name: "",
-        location: "",
-        description: "",
-        startDate: "",
-        endDate: "",
-        coverPhotoUrl: "",
+        name: trip.name,
+        location: trip.location ?? "",
+        description: trip.description ?? "",
+        startDate: toMMDDYYYY(trip.startDate),
+        endDate: toMMDDYYYY(trip.endDate),
+        coverPhotoUrl: trip.coverPhotoUrl ?? "",
     })
-
-    const resetForm = () => {
-        setForm({
-            name: "",
-            location: "",
-            description: "",
-            startDate: "",
-            endDate: "",
-            coverPhotoUrl: "",
-        })
-        setError(null)
-    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -54,13 +55,8 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
             setError("End date must be on or after start date.")
             return
         }
-        if (!user?.id) {
-            setError("You must be signed in to create a trip.")
-            return
-        }
         try {
-            await createTrip({
-                userId: user.id,
+            await updateTrip(trip.id, {
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
                 location: form.location.trim() || undefined,
@@ -68,17 +64,12 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                 endDate: form.endDate,
                 ...(form.coverPhotoUrl.trim() && { coverPhotoUrl: form.coverPhotoUrl.trim() }),
             })
-            resetForm()
             onOpenChange(false)
+            onSuccess?.()
         } catch (err: unknown) {
-            const message = typeof err === "string" ? err : err instanceof Error ? err.message : "Failed to create trip."
-            setError(message ?? "Failed to create trip.")
+            const message = typeof err === "string" ? err : err instanceof Error ? err.message : "Failed to update trip."
+            setError(message ?? "Failed to update trip.")
         }
-    }
-
-    const handleCancel = () => {
-        resetForm()
-        onOpenChange(false)
     }
 
     const textareaClass = cn(
@@ -92,7 +83,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
             <DialogContent className="max-w-[480px] p-0">
                 <div className="border-b border-border-token px-6 py-4">
                     <DialogTitle className="font-display text-subheading font-semibold text-text-primary">
-                        New trip
+                        Edit trip
                     </DialogTitle>
                 </div>
 
@@ -104,11 +95,11 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                     )}
 
                     <div>
-                        <label htmlFor="trip-name" className="mb-1.5 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="edit-trip-name" className="mb-1.5 block text-sm font-medium text-text-secondary">
                             Trip name <span className="text-red-400">*</span>
                         </label>
                         <Input
-                            id="trip-name"
+                            id="edit-trip-name"
                             type="text"
                             required
                             value={form.name}
@@ -118,11 +109,11 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                     </div>
 
                     <div>
-                        <label htmlFor="trip-location" className="mb-1.5 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="edit-trip-location" className="mb-1.5 block text-sm font-medium text-text-secondary">
                             Location <span className="text-text-muted">(optional)</span>
                         </label>
                         <Input
-                            id="trip-location"
+                            id="edit-trip-location"
                             type="text"
                             icon={<MapPin />}
                             value={form.location}
@@ -132,11 +123,11 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                     </div>
 
                     <div>
-                        <label htmlFor="trip-description" className="mb-1.5 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="edit-trip-description" className="mb-1.5 block text-sm font-medium text-text-secondary">
                             Description <span className="text-text-muted">(optional)</span>
                         </label>
                         <textarea
-                            id="trip-description"
+                            id="edit-trip-description"
                             rows={3}
                             value={form.description}
                             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -147,7 +138,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="trip-start" className="mb-1.5 block text-sm font-medium text-text-secondary">
+                            <label htmlFor="edit-trip-start" className="mb-1.5 block text-sm font-medium text-text-secondary">
                                 Start date <span className="text-red-400">*</span>
                             </label>
                             <DatePicker
@@ -157,7 +148,7 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                             />
                         </div>
                         <div>
-                            <label htmlFor="trip-end" className="mb-1.5 block text-sm font-medium text-text-secondary">
+                            <label htmlFor="edit-trip-end" className="mb-1.5 block text-sm font-medium text-text-secondary">
                                 End date <span className="text-red-400">*</span>
                             </label>
                             <DatePicker
@@ -169,11 +160,11 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                     </div>
 
                     <div>
-                        <label htmlFor="trip-cover" className="mb-1.5 block text-sm font-medium text-text-secondary">
+                        <label htmlFor="edit-trip-cover" className="mb-1.5 block text-sm font-medium text-text-secondary">
                             Cover photo URL <span className="text-text-muted">(optional)</span>
                         </label>
                         <Input
-                            id="trip-cover"
+                            id="edit-trip-cover"
                             type="url"
                             value={form.coverPhotoUrl}
                             onChange={(e) => setForm((f) => ({ ...f, coverPhotoUrl: e.target.value }))}
@@ -182,11 +173,11 @@ export function CreateTripModal({ open, onOpenChange }: CreateTripModalProps) {
                     </div>
 
                     <div className="flex justify-end gap-2 border-t border-border-token pt-4">
-                        <Button type="button" variant="ghost" onClick={handleCancel}>
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Creating…" : "Create trip"}
+                            {isSubmitting ? "Saving…" : "Save changes"}
                         </Button>
                     </div>
                 </form>

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
-import type { CreateTripInput, Trip } from "@/app/types"
+import type { CreateTripInput, UpdateTripInput, Trip } from "@/app/types"
 import api from "@/lib/api"
 
 // Thunks - a special kind of function used fo async operations
@@ -22,6 +22,19 @@ export const createTrip = createAsyncThunk<Trip, CreateTripInput, { rejectValue:
         }
     }
 );
+export const updateTripAsync = createAsyncThunk<Trip, { id: string; changes: UpdateTripInput }, { rejectValue: string }>(
+    "trips/updateTripAsync",
+    async ({ id, changes }, { rejectWithValue }) => {
+        try {
+            const response = await api.patch(`/trips/${id}`, changes);
+            return response.data as Trip;
+        } catch (err: any) {
+            const message = err?.response?.data?.message ?? err?.message ?? "Failed to update trip";
+            return rejectWithValue(message);
+        }
+    }
+);
+
 export const tripSlice = createSlice({
     name: "trip",
     initialState: {
@@ -75,6 +88,21 @@ export const tripSlice = createSlice({
         builder.addCase(createTrip.rejected, (state, action) => {
             state.loading = false;
             state.error = (action.payload as string) ?? action.error.message ?? "Failed to create trip";
+        });
+        builder.addCase(updateTripAsync.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+        });
+        builder.addCase(updateTripAsync.fulfilled, (state, action) => {
+            state.loading = false;
+            const idx = state.trips.findIndex(t => t.id === action.payload.id);
+            if (idx !== -1) {
+                state.trips[idx] = action.payload;
+            }
+        });
+        builder.addCase(updateTripAsync.rejected, (state, action) => {
+            state.loading = false;
+            state.error = (action.payload as string) ?? action.error.message ?? "Failed to update trip";
         });
     },
 })

@@ -1,6 +1,6 @@
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { fetchTrips, createTrip } from "./tripsSlice";
-import type { CreateTripInput, Trip } from "@/app/types";
+import { fetchTrips, createTrip, updateTripAsync } from "./tripsSlice";
+import type { CreateTripInput, UpdateTripInput, Trip } from "@/app/types";
 import type { RootState } from "@/app/store";
 
 export const selectTrips = (state: RootState) => state.trip.trips;
@@ -20,6 +20,22 @@ export const useCreateTrip = () => {
 
   return {
     createTrip: createTripHandler,
+    loading,
+    error,
+  };
+};
+
+export const useUpdateTrip = () => {
+  const dispatch = useAppDispatch();
+  const loading = useAppSelector(selectTripsLoading);
+  const error = useAppSelector(selectTripsError);
+
+  const updateTripHandler = async (id: string, changes: UpdateTripInput): Promise<Trip> => {
+    return await dispatch(updateTripAsync({ id, changes })).unwrap();
+  };
+
+  return {
+    updateTrip: updateTripHandler,
     loading,
     error,
   };

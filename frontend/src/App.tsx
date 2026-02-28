@@ -14,8 +14,8 @@ function App() {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#070807]">
-        <div className="text-[#9A9C9B]">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-bg-base">
+        <div className="text-text-muted">Loading...</div>
       </div>
     )
   }

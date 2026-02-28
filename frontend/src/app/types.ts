@@ -3,20 +3,32 @@ export interface Trip {
   userId: string;
   name: string;
   description?: string | null;
+  location?: string | null;
   startDate: string;
   endDate: string;
   coverPhotoUrl?: string | null;
   // Fresh signed URL for viewing the cover (when coverPhotoUrl stores an S3 key).
   coverViewUrl?: string | null;
   createdAt?: string;
+  _count?: { photos: number };
 }
 
 export type CreateTripInput = {
   userId: string;
   name: string;
   description?: string;
+  location?: string;
   startDate: string;
   endDate: string;
+  coverPhotoUrl?: string;
+};
+
+export type UpdateTripInput = {
+  name?: string;
+  description?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
   coverPhotoUrl?: string;
 };
 
