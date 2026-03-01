@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CAPTION_MAX_LEN } from "../../frontend/src/lib/constant";
+import { CAPTION_MAX_LEN } from "../config/constants";
 const photoIdParam = z.object({
     photoId: z.uuid("Photo ID must be a valid UUID"),
 });
@@ -32,4 +32,3 @@ export const updatePhotoSchema = z.object({
 export const photoFileSchema = z.object({
     file: photoFile,
 });
-
