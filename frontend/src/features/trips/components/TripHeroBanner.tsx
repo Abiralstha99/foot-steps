@@ -28,7 +28,7 @@ export function TripHeroBanner({
     onShare,
     onChangeCover,
 }: TripHeroBannerProps) {
-    const cover = trip.coverViewUrl ?? trip.coverPhotoUrl
+    const cover = trip.coverUrl
     const count = photoCount ?? trip._count?.photos
 
     return (

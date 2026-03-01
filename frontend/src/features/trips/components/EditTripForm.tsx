@@ -36,7 +36,7 @@ export function EditTripModal({ trip, open, onOpenChange, onSuccess }: EditTripM
         description: trip.description ?? "",
         startDate: toMMDDYYYY(trip.startDate),
         endDate: toMMDDYYYY(trip.endDate),
-        coverPhotoUrl: trip.coverPhotoUrl ?? "",
+        coverPhotoUrl: "",
     })
 
     const handleSubmit = async (e: React.FormEvent) => {

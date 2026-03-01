@@ -70,7 +70,7 @@ export function TripTimeline({ tripId, photos, onPhotoClick }: TripTimelineProps
           <DayHeader label={group.label} />
           <div className="grid grid-cols-3 gap-1">
             {group.photos.map((photo) => {
-              const src = photo.viewUrl ?? photo.url ?? ""
+              const src = photo.url ?? ""
               const tags = (photo.aiTags ?? []).slice(0, 3)
 
               return (

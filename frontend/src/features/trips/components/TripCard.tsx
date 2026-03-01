@@ -13,7 +13,7 @@ function formatDateRange(startDate: string, endDate: string): string {
 }
 
 export function TripCard({ trip }: { trip: Trip }) {
-  const cover = trip.coverViewUrl ?? trip.coverPhotoUrl
+  const cover = trip.coverUrl
 
   return (
     <Link

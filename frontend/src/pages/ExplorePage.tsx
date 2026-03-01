@@ -1,134 +1,111 @@
-import { useRef, useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { fetchAllPhotos } from "@/features/photos/photosSlice";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import "leaflet.markercluster";
-import pinIconUrl from "@/assets/pin.png";
+import { useEffect, useRef } from "react"
+import L from "leaflet"
+import "leaflet.markercluster"
+import "leaflet/dist/leaflet.css"
+
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import { fetchAllPhotos } from "@/features/photos/photosSlice"
+import { createPhotoMarker } from "@/features/maps/PhotoMapPin"
+import {
+  getCurrentTileUrl,
+  getDarkTileUrl,
+  getLightTileUrl,
+  getTileAttribution,
+  getClusterIconFactory,
+} from "@/features/maps/mapUtils"
 
 function ExplorePage() {
-  const mapContainer = useRef(null);
-  const map = useRef<L.Map | null>(null);
-  const markerClusterGroup = useRef<L.MarkerClusterGroup | null>(null);
-  const center = { lng: 13.338414, lat: 52.507932 };
-  const [zoom] = useState(3);
+  const mapContainer = useRef<HTMLDivElement | null>(null)
+  const map = useRef<L.Map | null>(null)
+  const tileLayer = useRef<L.TileLayer | null>(null)
+  const clusterGroup = useRef<L.MarkerClusterGroup | null>(null)
 
-  // Redux hooks
-  const dispatch = useAppDispatch();
-  const photos = useAppSelector((state) => state.photos.photos);
-  const loading = useAppSelector((state) => state.photos.loading);
+  const dispatch = useAppDispatch()
+  const photos = useAppSelector((state) => state.photos.photos)
+  const loading = useAppSelector((state) => state.photos.loading)
 
-  // Fetch photos on mount
+  // Fetch all photos on mount
   useEffect(() => {
-    dispatch(fetchAllPhotos());
-  }, [dispatch]);
+    dispatch(fetchAllPhotos())
+  }, [dispatch])
 
   // Initialize map once
   useEffect(() => {
-    if (map.current || !mapContainer.current) return;
+    if (map.current || !mapContainer.current) return
 
-    map.current = new L.Map(mapContainer.current as HTMLElement, {
-      center: L.latLng(center.lat, center.lng),
-      zoom: zoom,
+    map.current = new L.Map(mapContainer.current, {
+      center: L.latLng(20, 0),
+      zoom: 2,
       maxZoom: 18,
       minZoom: 2,
-    });
+    })
 
-    // MapTiler raster tiles require {z}/{x}/{y} in the URL for Leaflet to fetch tiles.
-    const apiKey = "DGBO1Q5omkr26b6cUWFg";
-    L.tileLayer(
-      `https://api.maptiler.com/maps/satellite-v4/{z}/{x}/{y}.jpg?key=${apiKey}`,
-      {
-        tileSize: 512,
-        zoomOffset: -1,
-        minZoom: 1,
-        attribution:
-          '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank" rel="noreferrer">MapTiler</a> ' +
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>',
-      },
-    ).addTo(map.current);
+    tileLayer.current = L.tileLayer(getCurrentTileUrl(), {
+      maxZoom: 18,
+      attribution: getTileAttribution(),
+    })
+    tileLayer.current.addTo(map.current)
 
-    // Initialize marker cluster group
-    markerClusterGroup.current = L.markerClusterGroup({
+    // @ts-expect-error — iconCreateFunction type mismatch between leaflet and markercluster types
+    clusterGroup.current = L.markerClusterGroup({
       maxClusterRadius: 50,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
       disableClusteringAtZoom: 13,
-      iconCreateFunction: function () {
-        return L.divIcon({
-          html: `<img src="${pinIconUrl}" style="width: 32px; height: 32px;" alt="" />`,
-          className: "custom-cluster-wrapper",
-          iconSize: L.point(32, 32),
-          iconAnchor: [16, 32],
-        });
-      },
-    });
-
-    markerClusterGroup.current.addTo(map.current);
+      iconCreateFunction: getClusterIconFactory(),
+    })
+    clusterGroup.current.addTo(map.current)
 
     return () => {
-      markerClusterGroup.current?.clearLayers();
-      markerClusterGroup.current = null;
-      map.current?.remove();
-      map.current = null;
-    };
-  }, [center.lng, center.lat, zoom]);
+      clusterGroup.current?.clearLayers()
+      clusterGroup.current = null
+      tileLayer.current = null
+      map.current?.remove()
+      map.current = null
+    }
+  }, [])
 
-  // Update markers when photos change
+  // Watch html class mutations to swap tile layer on theme change
   useEffect(() => {
-    if (!markerClusterGroup.current || loading) return;
+    const observer = new MutationObserver(() => {
+      if (!tileLayer.current) return
+      const isLight = document.documentElement.classList.contains("light")
+      tileLayer.current.setUrl(isLight ? getLightTileUrl() : getDarkTileUrl())
+    })
 
-    // Clear existing markers
-    markerClusterGroup.current.clearLayers();
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    })
 
-    // Add markers for photos with coordinates
+    return () => observer.disconnect()
+  }, [])
+
+  // Rebuild markers when photos change
+  useEffect(() => {
+    if (!clusterGroup.current || loading) return
+
+    clusterGroup.current.clearLayers()
+
     photos.forEach((photo) => {
       if (photo.latitude != null && photo.longitude != null) {
-        const customIcon = L.icon({
-          iconUrl: pinIconUrl,
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
-          popupAnchor: [0, -32],
-        });
-
-        const displayUrl = photo.viewUrl ?? photo.url ?? "";
-        const marker = L.marker([photo.latitude, photo.longitude], {
-          icon: customIcon,
-        });
-
-        const imageHtml = displayUrl
-          ? `<img src="${displayUrl}" style="width: 100%; max-width: 200px; max-height: 200px; object-fit: cover; display: block; border-radius: 4px;" alt="Trip photo" crossorigin="anonymous" />`
-          : '<div style="width: 200px; height: 150px; background: #333; color: #999; display: flex; align-items: center; justify-content: center; font-size: 12px;">No image</div>';
-
-        marker.bindPopup(
-          `<div style="max-width: 220px; padding: 0; line-height: 0; overflow: hidden;">${imageHtml}</div>`,
-          { minWidth: 220, className: "leaflet-popup-photo" }
-        );
-
-        marker.bindTooltip(
-          `<div class="leaflet-tooltip-photo-inner" style="max-width: 220px; padding: 0; line-height: 0; min-width: 200px; min-height: 150px;">${imageHtml}</div>`,
-          {
-            permanent: false,
-            direction: "top",
-            offset: [0, -32],
-            opacity: 1,
-            className: "leaflet-tooltip-photo",
-            interactive: true,
-            sticky: true,
-          }
-        );
-
-        markerClusterGroup.current!.addLayer(marker);
+        const marker = createPhotoMarker(photo)
+        clusterGroup.current!.addLayer(marker)
       }
-    });
-  }, [photos, loading]);
+    })
+  }, [photos, loading])
 
   return (
-    <div className="fixed inset-0 md:left-[260px]">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="fixed inset-0 ml-[52px]">
+      {/* Page title overlay */}
+      <div className="absolute left-4 top-4 z-[1000] rounded-lg bg-bg-surface/80 px-4 py-2 backdrop-blur-sm">
+        <h1 className="font-display text-heading text-text-primary">Explore</h1>
+      </div>
+
+      <div ref={mapContainer} className="h-full w-full" />
     </div>
-  );
+  )
 }
 
-export default ExplorePage;
+export default ExplorePage

@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { Loader2 } from "lucide-react"
-
 import { TripHeroBanner } from "@/features/trips/components/TripHeroBanner"
 import { TripTabBar, type TripTab } from "@/features/trips/components/TripTabBar"
 import { UploadFAB } from "@/features/trips/components/UploadFAB"
 import { EditTripModal } from "@/features/trips/components/EditTripForm"
 import UploadForm from "@/components/ui/UploadForm"
+import { TripMapView } from "@/features/trips/components/TripMapView"
+import { TripTimeline } from "@/features/trips/components/TripTimeline"
+import { ShareDialog } from "@/features/trips/components/ShareDialog"
 import { PhotoGrid } from "@/features/photos/components/PhotoGrid"
-import { PhotoModal } from "@/features/photos/components/PhotoModal"
+import { PhotoLightbox } from "@/features/photos/components/PhotoLightbox"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useUpdatePhoto } from "@/features/photos/usePhotos"
@@ -33,8 +35,9 @@ export function TripDetailPage() {
   const [activeTab, setActiveTab] = useState<TripTab>("grid")
   const [uploadOpen, setUploadOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [coverDialogOpen, setCoverDialogOpen] = useState(false)
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [trip, setTrip] = useState<TripWithPhotos | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,6 +46,15 @@ export function TripDetailPage() {
   const [coverError, setCoverError] = useState<string | null>(null)
   const [isSavingCover, setIsSavingCover] = useState(false)
   const { updatePhotoCaption } = useUpdatePhoto()
+
+  const handleUpdateCaption = async (photoId: string, caption: string) => {
+    await updatePhotoCaption(photoId, caption)
+    setTrip((prev) =>
+      prev
+        ? { ...prev, photos: prev.photos.map((p) => (p.id === photoId ? { ...p, caption } : p)) }
+        : prev
+    )
+  }
 
   const refreshTrip = async (id: string) => {
     const res = await api.get(`/trips/${id}`)
@@ -77,15 +89,13 @@ export function TripDetailPage() {
         },
       })
 
-      const s3Key = uploadRes.data?.s3Key
-      const coverViewUrl = uploadRes.data?.viewUrl
-      if (!s3Key) throw new Error("No s3Key returned from upload")
+      const photoId = uploadRes.data?.id
+      const coverUrl = uploadRes.data?.url
+      if (!photoId) throw new Error("No photo ID returned from upload")
 
-      await api.patch(`/trips/${trip.id}`, { coverPhotoUrl: s3Key })
+      await api.patch(`/trips/${trip.id}`, { coverPhotoId: photoId })
       setTrip((prev) =>
-        prev
-          ? { ...prev, coverPhotoUrl: s3Key, coverViewUrl: coverViewUrl ?? prev.coverViewUrl ?? null }
-          : prev
+        prev ? { ...prev, coverUrl: coverUrl ?? prev.coverUrl ?? null } : prev
       )
       setCoverDialogOpen(false)
     } catch (err: unknown) {
@@ -101,7 +111,7 @@ export function TripDetailPage() {
     setCoverError(null)
     try {
       await api.patch(`/trips/${trip.id}`, { coverPhotoUrl: null })
-      setTrip((prev) => (prev ? { ...prev, coverPhotoUrl: null, coverViewUrl: null } : prev))
+      setTrip((prev) => (prev ? { ...prev, coverUrl: null } : prev))
       setCoverDialogOpen(false)
     } catch (err: unknown) {
       setCoverError(extractErrorMessage(err, "Failed to remove cover photo"))
@@ -140,7 +150,6 @@ export function TripDetailPage() {
         if (!cancelled) setIsLoading(false)
       }
     }
-
     fetchTrip()
     return () => {
       cancelled = true
@@ -174,7 +183,7 @@ export function TripDetailPage() {
           trip={trip}
           photoCount={trip.photos?.length}
           onEdit={() => setEditOpen(true)}
-          onShare={() => {}}
+          onShare={() => setShareOpen(true)}
           onChangeCover={openCoverDialog}
         />
       </div>
@@ -190,32 +199,45 @@ export function TripDetailPage() {
           <PhotoGrid
             photos={trip.photos ?? []}
             isLoading={false}
-            onPhotoClick={(photo) => setSelectedPhoto(photo)}
+            onPhotoClick={(_, index) => setLightboxIndex(index)}
+            onPhotosDeleted={(ids) =>
+              setTrip((prev) =>
+                prev
+                  ? { ...prev, photos: prev.photos.filter((p) => !ids.includes(p.id)) }
+                  : prev
+              )
+            }
           />
         )}
         {activeTab === "timeline" && (
-          <div className="py-16 text-center text-body text-text-muted">
-            Timeline view is coming soon.
-          </div>
+          <TripTimeline
+            tripId={tripId ?? undefined}
+            onPhotoClick={(photo) => {
+              const idx = trip.photos.findIndex((p) => p.id === photo.id)
+              setLightboxIndex(idx >= 0 ? idx : 0)
+            }}
+          />
         )}
         {activeTab === "map" && (
-          <div className="py-16 text-center text-body text-text-muted">
-            Map view is coming soon.
-          </div>
+          <TripMapView photos={trip.photos ?? []} />
         )}
       </div>
 
       {/* Upload FAB */}
       <UploadFAB onClick={() => setUploadOpen(true)} />
 
-      {/* Photo viewer */}
-      <PhotoModal
-        photo={selectedPhoto}
-        open={!!selectedPhoto}
-        onOpenChange={(open) => {
-          if (!open) setSelectedPhoto(null)
-        }}
-        onUpdateCaption={updatePhotoCaption}
+      {/* Photo lightbox */}
+      <PhotoLightbox
+        photos={trip.photos ?? []}
+        initialIndex={lightboxIndex >= 0 ? lightboxIndex : 0}
+        open={lightboxIndex >= 0}
+        onClose={() => setLightboxIndex(-1)}
+        onUpdateCaption={handleUpdateCaption}
+        onPhotoDeleted={(id) =>
+          setTrip((prev) =>
+            prev ? { ...prev, photos: prev.photos.filter((p) => p.id !== id) } : prev
+          )
+        }
       />
 
       {/* Upload form */}
@@ -237,6 +259,18 @@ export function TripDetailPage() {
           open={editOpen}
           onOpenChange={setEditOpen}
           onSuccess={() => tripId && refreshTrip(tripId)}
+        />
+      )}
+
+      {/* Share dialog */}
+      {shareOpen && (
+        <ShareDialog
+          trip={trip}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          onShareTokenChange={(token) =>
+            setTrip((prev) => (prev ? { ...prev, shareToken: token } : prev))
+          }
         />
       )}
 
@@ -262,10 +296,10 @@ export function TripDetailPage() {
               className="block w-full cursor-pointer rounded border border-border-token bg-bg-base px-3 py-2 text-sm text-text-secondary file:mr-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover"
             />
 
-            {(coverPreviewSrc || trip.coverViewUrl) && (
+            {(coverPreviewSrc || trip.coverUrl) && (
               <div className="overflow-hidden rounded-lg border border-border-token">
                 <img
-                  src={coverPreviewSrc ?? trip.coverViewUrl ?? ""}
+                  src={coverPreviewSrc ?? trip.coverUrl ?? ""}
                   alt="Cover preview"
                   className="h-40 w-full object-cover"
                 />

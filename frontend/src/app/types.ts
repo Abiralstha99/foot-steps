@@ -6,9 +6,8 @@ export interface Trip {
   location?: string | null;
   startDate: string;
   endDate: string;
-  coverPhotoUrl?: string | null;
-  // Fresh signed URL for viewing the cover (when coverPhotoUrl stores an S3 key).
-  coverViewUrl?: string | null;
+  /** Display-ready signed URL for the cover image. Never an S3 key. */
+  coverUrl?: string | null;
   shareToken?: string | null;
   createdAt?: string;
   _count?: { photos: number };
@@ -30,16 +29,15 @@ export type UpdateTripInput = {
   location?: string;
   startDate?: string;
   endDate?: string;
-  coverPhotoUrl?: string;
+  coverPhotoId?: string;
+  coverPhotoUrl?: string | null;
 };
 
 export interface Photo {
   id: string;
   tripId: string;
+  /** Display-ready signed URL. Never an S3 key. */
   url?: string | null;
-  // Fresh, short-lived signed URL returned by the API for viewing.
-  // Prefer this over `url` when present.
-  viewUrl?: string | null;
   takenAt?: string | null;
   latitude?: number | null;
   longitude?: number | null;

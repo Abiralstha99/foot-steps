@@ -20,7 +20,7 @@ function formatDateRange(startDate: string, endDate: string): string {
 }
 
 function HeroCard({ trip }: { trip: Trip }) {
-  const cover = trip.coverViewUrl ?? trip.coverPhotoUrl
+  const cover = trip.coverUrl
 
   return (
     <div className="relative h-[40vh] max-h-[400px] w-full overflow-hidden rounded-lg">
