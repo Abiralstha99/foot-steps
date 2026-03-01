@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 import { getPresignedUrl } from "../services/s3.service";
-import { Photo, DayGroup } from "../types/types";
+
 
 async function getTrip(req: Request, res: Response) {
   try {
@@ -220,77 +220,7 @@ async function deleteTripById(req: Request, res: Response) {
   }
 }
 
-function groupPhotosByDay(photos: Photo[]): DayGroup[] {
-  const dated = photos.filter((p) => p.takenAt != null);
-  const undated = photos.filter((p) => p.takenAt == null);
-
-  // Sort dated photos ascending by takenAt
-  dated.sort((a, b) => {
-    return new Date(a.takenAt!).getTime() - new Date(b.takenAt!).getTime();
-  });
-
-  // Group into ordered map keyed by YYYY-MM-DD (sliced directly from ISO string)
-  const grouped = new Map<string, Photo[]>();
-  for (const photo of dated) {
-    const key = photo.takenAt!.slice(0, 10);
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(photo);
-  }
-
-  const result: DayGroup[] = Array.from(grouped.entries()).map(([label, groupedPhotos]) => ({
-    label,
-    photos: groupedPhotos,
-  }));
-
-  if (undated.length > 0) {
-    result.push({ label: "Unknown Date", photos: undated });
-  }
-
-  return result;
-}
-
-/**
- * Groups photos by calendar day (YYYY-MM-DD from takenAt), sorted ascending.
- * Photos with no takenAt are appended as a final "Unknown Date" group.
- * Pure function — no side effects.
- */
-async function getPhotosByGrouped(req: Request, res: Response) {
-  try {
-    const userId = req.auth().userId;
-    const { id: tripId } = req.params as { id: string };
-
-    const trip = await prisma.trip.findFirst({
-      where: { id: tripId, userId }, // ownership check
-      include: { photos: true },
-    });
-
-    if (!trip) return res.status(404).json({ message: "Trip not found" });
-
-    const photos: Photo[] = await Promise.all(
-      trip.photos.map(async (p) => {
-        const url = await getPresignedUrl(p.s3Key);
-        return {
-          id: p.id,
-          tripId: p.tripId,
-          url,
-          takenAt: p.takenAt ? p.takenAt.toISOString() : null,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          aiTags: p.aiTags,
-          caption: p.caption,
-          createdAt: p.createdAt.toISOString(),
-        };
-      })
-    );
-
-    const result: DayGroup[] = groupPhotosByDay(photos);
-
-    return res.json(result)
-  } catch (error) {
-    console.error("Error grouping photos:", error);
-    return res.status(500).json({ message: "Failed to group photos" });
-  }
-}
 
 
-export { getTrip, createTrip, getTripById, getTripPhotos, updateTripById, deleteTripById, getPhotosByGrouped, groupPhotosByDay };
+
+export { getTrip, createTrip, getTripById, getTripPhotos, updateTripById, deleteTripById };
