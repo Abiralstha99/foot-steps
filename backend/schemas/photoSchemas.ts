@@ -1,11 +1,11 @@
 import { z } from "zod";
-
+import { CAPTION_MAX_LEN } from "../config/constants";
 const photoIdParam = z.object({
     photoId: z.uuid("Photo ID must be a valid UUID"),
 });
 
 const updatePhotoBody = z.object({
-    caption: z.string().max(500, "Caption cannot exceed 500 characters").optional(),
+    caption: z.string().max(CAPTION_MAX_LEN, `Caption cannot exceed ${CAPTION_MAX_LEN} characters`).optional(),
 });
 
 // gif excluded — known polyglot attack vector
@@ -32,4 +32,3 @@ export const updatePhotoSchema = z.object({
 export const photoFileSchema = z.object({
     file: photoFile,
 });
-

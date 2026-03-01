@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Edit2, Loader2, Save, X } from "lucide-react"
-
+import { CAPTION_MAX_LEN } from "@/lib/constant"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -9,8 +9,6 @@ type CaptionEditorProps = {
   onSave: (newCaption: string) => Promise<void>
   readonly?: boolean
 }
-
-const MAX_LEN = 500
 
 export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEditorProps) {
   const [isEditing, setIsEditing] = useState(false)
@@ -29,15 +27,13 @@ export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEdit
     if (!isEditing) return
     const el = textareaRef.current
     if (!el) return
-
-    // Auto-resize: reset then grow to scrollHeight.
     el.style.height = "auto"
     el.style.height = `${el.scrollHeight}px`
   }, [text, isEditing])
 
   const normalized = useMemo(() => text.replace(/\r\n/g, "\n"), [text])
   const charCount = normalized.length
-  const isOverLimit = charCount > MAX_LEN
+  const isOverLimit = charCount > CAPTION_MAX_LEN
 
   const startEdit = () => {
     if (readonly) return
@@ -55,10 +51,9 @@ export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEdit
   const save = async () => {
     if (readonly || isSaving) return
     if (isOverLimit) {
-      setError(`Caption must be ${MAX_LEN} characters or fewer.`)
+      setError(`Caption must be ${CAPTION_MAX_LEN} characters or fewer.`)
       return
     }
-
     setIsSaving(true)
     setError(null)
     try {
@@ -75,25 +70,18 @@ export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEdit
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-white">Caption</h3>
+          <h3 className="text-sm font-semibold text-text-primary">Caption</h3>
           {!readonly && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={startEdit}
-              className="text-white/80 hover:bg-white/10 hover:text-white"
-            >
-              <Edit2 className="h-4 w-4" />
+            <Button type="button" variant="ghost" size="sm" onClick={startEdit}>
+              <Edit2 className="size-4" />
               Edit
             </Button>
           )}
         </div>
-
         {caption?.trim() ? (
-          <p className="text-sm text-white/90 whitespace-pre-wrap">{caption}</p>
+          <p className="text-sm text-text-primary whitespace-pre-wrap">{caption}</p>
         ) : (
-          <p className="text-sm text-[#9A9C9B]">No caption provided</p>
+          <p className="text-sm text-text-muted">No caption provided</p>
         )}
       </div>
     )
@@ -102,12 +90,12 @@ export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEdit
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-white">Caption</h3>
-        <div className="text-xs text-[#9A9C9B]">
+        <h3 className="text-sm font-semibold text-text-primary">Caption</h3>
+        <div className="text-xs text-text-muted">
           <span className={isOverLimit ? "text-red-400" : undefined}>
-            {Math.min(charCount, MAX_LEN)}
+            {Math.min(charCount, CAPTION_MAX_LEN)}
           </span>
-          /{MAX_LEN}
+          /{CAPTION_MAX_LEN}
         </div>
       </div>
 
@@ -115,43 +103,41 @@ export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEdit
         ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        maxLength={MAX_LEN + 50}
+        maxLength={CAPTION_MAX_LEN + 50}
         placeholder="Write a caption..."
         className="min-h-[88px] resize-none"
         disabled={isSaving}
       />
 
       {error && (
-        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">
-          {error}
-        </p>
+        <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>
       )}
 
       <div className="flex items-center justify-end gap-2">
         <Button
           type="button"
-          variant="outline"
-          className="border-white/10 bg-black/20 text-white hover:bg-white/5 hover:text-white"
+          variant="ghost"
+          size="sm"
           onClick={cancelEdit}
           disabled={isSaving}
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
           Cancel
         </Button>
         <Button
           type="button"
-          className="bg-[#3C4741] text-white hover:bg-[#4a5850]"
+          size="sm"
           onClick={save}
           disabled={isSaving || isOverLimit}
         >
           {isSaving ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
               Saving
             </>
           ) : (
             <>
-              <Save className="h-4 w-4" />
+              <Save className="size-4" />
               Save
             </>
           )}
@@ -160,4 +146,3 @@ export function CaptionEditor({ caption, onSave, readonly = false }: CaptionEdit
     </div>
   )
 }
-

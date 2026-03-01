@@ -1,27 +1,7 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
+import { createSlice } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
-import type { CreateTripInput, Trip } from "@/app/types"
-import api from "@/lib/api"
+import type { Trip } from "@/app/types"
 
-// Thunks - a special kind of function used fo async operations
-// Thunk = “I’m going to fetch data and automatically send pending/fulfilled/rejected actions.”
-export const fetchTrips = createAsyncThunk("trips/fetchTrips", async () => {
-    const response = await api.get("/trips");
-    return response.data;
-});
-
-export const createTrip = createAsyncThunk<Trip, CreateTripInput, { rejectValue: string }>(
-    "trips/createTrip",
-    async (trip, { rejectWithValue }) => {
-        try {
-            const response = await api.post("/trips", trip);
-            return response.data as Trip;
-        } catch (err: any) {
-            const message = err?.response?.data?.message ?? err?.message ?? "Failed to create trip";
-            return rejectWithValue(message);
-        }
-    }
-);
 export const tripSlice = createSlice({
     name: "trip",
     initialState: {
@@ -49,35 +29,10 @@ export const tripSlice = createSlice({
             }
         },
     },
-    // extraReducers is used to handle the async actions
-    // Builder = “Whenever those actions happen, here’s how the slice should update its state.”
-    extraReducers: (builder) => {
-        builder.addCase(fetchTrips.pending, (state) => {
-            state.loading = true;
-            state.error = null;
-        });
-        builder.addCase(fetchTrips.fulfilled, (state, action) => {
-            state.loading = false;
-            state.trips = action.payload as Trip[];
-        });
-        builder.addCase(fetchTrips.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.error.message as string;
-        });
-        builder.addCase(createTrip.pending, (state) => {
-            state.loading = true;
-            state.error = null;
-        });
-        builder.addCase(createTrip.fulfilled, (state, action) => {
-            state.loading = false;
-            state.trips.push(action.payload);
-        });
-        builder.addCase(createTrip.rejected, (state, action) => {
-            state.loading = false;
-            state.error = (action.payload as string) ?? action.error.message ?? "Failed to create trip";
-        });
-    },
 })
 
 export const { addTrip, removeTrip, updateTrip } = tripSlice.actions;
 export default tripSlice;
+
+
+

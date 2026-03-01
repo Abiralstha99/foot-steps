@@ -5,9 +5,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        surface: "#121212",
-        accent: "#3C4741",
-        "muted-gray": "#9A9C9B",
+        "bg-base": "var(--bg-base)",
+        "bg-surface": "var(--bg-surface)",
+        "bg-raised": "var(--bg-raised)",
+        "border-token": "var(--border)",
+        "text-primary": "var(--text-primary)",
+        "text-secondary": "var(--text-secondary)",
+        "text-muted": "var(--text-muted)",
+        accent: "#F59E0B",
+        "accent-hover": "var(--accent-hover)",
+        "accent-subtle": "var(--accent-subtle)",
+      },
+      fontFamily: {
+        display: ["Fraunces", "Georgia", "serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
     },
   },

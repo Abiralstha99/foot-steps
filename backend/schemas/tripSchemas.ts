@@ -5,7 +5,7 @@ const tripIdParam = z.object({
 });
 
 const createTripBody = z.object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().trim().min(1, "Name is required"),
     description: z.string().optional(),
     startDate: z.iso.datetime({ message: "startDate must be a valid ISO 8601 date" }),
     endDate: z.iso.datetime({ message: "endDate must be a valid ISO 8601 date" }),
@@ -19,10 +19,11 @@ const createTripBody = z.object({
 );
 
 const updateTripBody = z.object({
-    name: z.string().min(1).optional(),
+    name: z.string().trim().min(1, "Name is required").optional(),
     description: z.string().optional(),
     startDate: z.iso.datetime().optional(),
     endDate: z.iso.datetime().optional(),
+    coverPhotoId: z.uuid("coverPhotoId must be a valid UUID").optional(),
     coverPhotoUrl: z
         .url()
         .refine(u => /^https?:\/\//i.test(u), { message: "Only http/https URLs are allowed" })

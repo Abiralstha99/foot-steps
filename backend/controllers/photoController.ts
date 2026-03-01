@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma";
 import { getPresignedUrl, uploadFile } from "../services/s3.service";
 import { upload } from "../lib/multer";
 import exifr from "exifr";
-
+import { Photo, DayGroup } from "../types/types";
 
 // Get all photos with coordinates
 async function getAllPhotos(req: Request, res: Response) {
@@ -26,17 +26,15 @@ async function getAllPhotos(req: Request, res: Response) {
       },
     });
 
-    const photosWithFreshUrls = await Promise.all(
+    const photosWithDisplayUrls = await Promise.all(
       photos.map(async (photo) => {
-        const viewUrl = await getPresignedUrl(photo.s3Key);
-        return {
-          ...photo,
-          viewUrl,
-        };
+        const url = await getPresignedUrl(photo.s3Key);
+        const { s3Key: _, ...rest } = photo;
+        return { ...rest, url };
       }),
     );
 
-    return res.json(photosWithFreshUrls);
+    return res.json(photosWithDisplayUrls);
   } catch (error) {
     console.error("Error fetching photos:", error);
     return res.status(500).json({
@@ -77,11 +75,11 @@ export const updatePhoto = async (req: Request, res: Response) => {
 
     const updatedPhoto = await prisma.photo.update({
       where: { id: photoId },
-      data: {
-        caption: caption, // Update the caption
-      },
+      data: { caption: caption ?? null },
     });
-    return res.status(200).json(updatedPhoto);
+    const url = await getPresignedUrl(updatedPhoto.s3Key);
+    const { s3Key: _, ...rest } = updatedPhoto;
+    return res.status(200).json({ ...rest, url });
   } catch (error) {
     console.error("Error updating photo:", error);
     return res.status(500).json({ message: "Failed to update photo" });
@@ -106,12 +104,9 @@ async function getPhotoById(req: Request, res: Response) {
     if (photo.trip.userId !== userId) {
       return res.status(403).json({ message: "Forbidden" });
     }
-    const viewUrl = await getPresignedUrl(photo.s3Key);
-    const { trip, ...photoWithoutTrip } = photo;
-    return res.json({
-      ...photoWithoutTrip,
-      viewUrl,
-    });
+    const url = await getPresignedUrl(photo.s3Key);
+    const { trip, s3Key: _, ...photoWithoutTrip } = photo;
+    return res.json({ ...photoWithoutTrip, url });
   } catch (error) {
     console.error("Error fetching photo:", error);
     return res.status(500).json({ message: "Failed to fetch photo" });
@@ -184,8 +179,9 @@ async function createPhoto(req: Request, res: Response) {
     },
   });
 
-  const viewUrl = await getPresignedUrl(key);
-  return res.status(201).json({ ...photo, viewUrl, url: viewUrl });
+  const url = await getPresignedUrl(key);
+  const { s3Key: _, ...photoWithoutKey } = photo;
+  return res.status(201).json({ ...photoWithoutKey, url });
 }
 
 async function handlePhotoUpload(req: Request, res: Response, next: NextFunction) {
@@ -200,4 +196,102 @@ async function handlePhotoUpload(req: Request, res: Response, next: NextFunction
   });
 }
 
-export { getAllPhotos, getPhotoById, createPhoto, handlePhotoUpload };
+async function deletePhoto(req: Request, res: Response) {
+  try {
+    const photoId = req.params.photoId as string;
+    const userId = req.auth().userId;
+
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      include: { trip: { select: { userId: true } } },
+    });
+
+    if (!photo) {
+      return res.status(404).json({ message: "Photo not found" });
+    }
+    if (photo.trip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    await prisma.photo.delete({ where: { id: photoId } });
+    return res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting photo:", error);
+    return res.status(500).json({ message: "Failed to delete photo" });
+  }
+}
+
+function groupPhotosByDay(photos: Photo[]): DayGroup[] {
+  const dated = photos.filter((p) => p.takenAt != null);
+  const undated = photos.filter((p) => p.takenAt == null);
+
+  // Sort dated photos ascending by takenAt
+  dated.sort((a, b) => {
+    return new Date(a.takenAt!).getTime() - new Date(b.takenAt!).getTime();
+  });
+
+  // Group into ordered map keyed by YYYY-MM-DD (sliced directly from ISO string)
+  const grouped = new Map<string, Photo[]>();
+  for (const photo of dated) {
+    const key = photo.takenAt!.slice(0, 10);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(photo);
+  }
+
+  const result: DayGroup[] = Array.from(grouped.entries()).map(([label, groupedPhotos]) => ({
+    label,
+    photos: groupedPhotos,
+  }));
+
+  if (undated.length > 0) {
+    result.push({ label: "Unknown Date", photos: undated });
+  }
+
+  return result;
+}
+
+/**
+ * Groups photos by calendar day (YYYY-MM-DD from takenAt), sorted ascending.
+ * Photos with no takenAt are appended as a final "Unknown Date" group.
+ * Pure function — no side effects.
+ */
+async function getPhotosByGrouped(req: Request, res: Response) {
+  try {
+    const userId = req.auth().userId;
+    const { id: tripId } = req.params as { id: string };
+
+    const trip = await prisma.trip.findFirst({
+      where: { id: tripId, userId }, // ownership check
+      include: { photos: true },
+    });
+
+    if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+    const photos: Photo[] = await Promise.all(
+      trip.photos.map(async (p) => {
+        const url = await getPresignedUrl(p.s3Key);
+        return {
+          id: p.id,
+          tripId: p.tripId,
+          url,
+          takenAt: p.takenAt ? p.takenAt.toISOString() : null,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          aiTags: p.aiTags,
+          caption: p.caption,
+          createdAt: p.createdAt.toISOString(),
+        };
+      })
+    );
+
+    const result: DayGroup[] = groupPhotosByDay(photos);
+
+    return res.json(result)
+  } catch (error) {
+    console.error("Error grouping photos:", error);
+    return res.status(500).json({ message: "Failed to group photos" });
+  }
+}
+
+export { getAllPhotos, getPhotoById, createPhoto, handlePhotoUpload, deletePhoto, getPhotosByGrouped };
+  

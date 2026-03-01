@@ -88,9 +88,9 @@ export function PhotoModal({ open, onOpenChange, photo, onUpdateCaption }: Photo
         <div className="flex h-full flex-col md:flex-row">
           {/* Left: Image */}
           <div className="relative flex flex-1 items-center justify-center bg-black">
-            {photo?.viewUrl || photo?.url ? (
+            {photo?.url ? (
               <img
-                src={(photo.viewUrl ?? photo.url) as string}
+                src={photo.url}
                 alt={localCaption || "Photo"}
                 className="max-h-full max-w-full object-contain"
               />

@@ -3,30 +3,41 @@ export interface Trip {
   userId: string;
   name: string;
   description?: string | null;
+  location?: string | null;
   startDate: string;
   endDate: string;
-  coverPhotoUrl?: string | null;
-  // Fresh signed URL for viewing the cover (when coverPhotoUrl stores an S3 key).
-  coverViewUrl?: string | null;
+  /** Display-ready signed URL for the cover image. Never an S3 key. */
+  coverUrl?: string | null;
+  shareToken?: string | null;
   createdAt?: string;
+  _count?: { photos: number };
 }
 
 export type CreateTripInput = {
   userId: string;
   name: string;
   description?: string;
+  location?: string;
   startDate: string;
   endDate: string;
   coverPhotoUrl?: string;
 };
 
+export type UpdateTripInput = {
+  name?: string;
+  description?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  coverPhotoId?: string;
+  coverPhotoUrl?: string | null;
+};
+
 export interface Photo {
   id: string;
   tripId: string;
+  /** Display-ready signed URL. Never an S3 key. */
   url?: string | null;
-  // Fresh, short-lived signed URL returned by the API for viewing.
-  // Prefer this over `url` when present.
-  viewUrl?: string | null;
   takenAt?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -34,6 +45,12 @@ export interface Photo {
   caption?: string | null;
   createdAt?: string;
 }
+
+/** Group of photos for one day (from GET /trips/:id/photos/grouped). */
+export type DayGroup = {
+  label: string;
+  photos: Photo[];
+};
 
 export interface User {
   id: string;

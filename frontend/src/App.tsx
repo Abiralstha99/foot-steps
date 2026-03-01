@@ -7,6 +7,7 @@ import { LandingPage } from "@/pages/LandingPage"
 import { TripsPage } from "@/pages/Trips"
 import { TripDetailPage } from "@/pages/TripDetail"
 import ExplorePage from "@/pages/ExplorePage"
+import { ShareAlbumPage } from "@/pages/ShareAlbumPage"
 
 function App() {
   const { isSignedIn, isLoaded } = useAuth()
@@ -14,16 +15,17 @@ function App() {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#070807]">
-        <div className="text-[#9A9C9B]">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-bg-base">
+        <div className="text-text-muted">Loading...</div>
       </div>
     )
   }
 
   return (
     <Routes>
-      {/* Public route */}
+      {/* Public routes */}
       <Route path="/" element={isSignedIn ? <Navigate to="/home" replace /> : <LandingPage />} />
+      <Route path="/share/:token" element={<ShareAlbumPage />} />
 
       {/* Protected routes with sidebar */}
       <Route element={<AppLayout />}>

@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from "vite";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
@@ -22,6 +23,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
       },
+    },
+    test: {
+      environment: "jsdom",
+      globals: true,
+      include: ["src/**/*.test.{ts,tsx}"],
     },
   };
 });
