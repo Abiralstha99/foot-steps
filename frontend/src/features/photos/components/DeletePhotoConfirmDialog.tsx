@@ -23,7 +23,7 @@ export function DeletePhotoConfirmDialog({ open, onOpenChange, onConfirm }: Prop
   }
 
   return (
-    <Dialog open={open} onOpenChange={isDeleting ? undefined : onOpenChange}>
+    <Dialog open={open} onOpenChange={isDeleting ? () => {} : onOpenChange}>
       <DialogContent className="max-w-sm p-0">
         <div className="border-b border-border-token px-6 py-4">
           <DialogTitle className="font-display text-subheading font-semibold text-text-primary">

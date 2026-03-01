@@ -13,6 +13,8 @@ const buttonVariants = cva(
           "bg-accent text-white hover:bg-accent-hover",
         secondary:
           "bg-bg-raised text-text-primary border border-border-token hover:bg-bg-raised/80",
+        outline:
+          "bg-bg-raised text-text-primary border border-border-token hover:bg-bg-raised/80",
         ghost:
           "text-text-secondary hover:bg-bg-raised hover:text-text-primary",
         destructive:
@@ -24,6 +26,7 @@ const buttonVariants = cva(
         sm: "h-8 px-3 text-xs",
         default: "h-9 px-4 text-sm",
         lg: "h-10 px-5 text-sm",
+        icon: "h-9 w-9 p-0",
       },
     },
     defaultVariants: {

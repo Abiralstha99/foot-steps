@@ -46,7 +46,6 @@ function ExplorePage() {
     })
     tileLayer.current.addTo(map.current)
 
-    // @ts-expect-error — iconCreateFunction type mismatch between leaflet and markercluster types
     clusterGroup.current = L.markerClusterGroup({
       maxClusterRadius: 50,
       spiderfyOnMaxZoom: true,
