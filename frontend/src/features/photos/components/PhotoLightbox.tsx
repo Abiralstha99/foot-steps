@@ -18,7 +18,7 @@ type Props = {
   open: boolean
   onClose: () => void
   onUpdateCaption?: (photoId: string, caption: string) => Promise<void>
-  onPhotoDeleted?: (id: string) => void
+  onPhotoDeleted?: (id: string) => void | Promise<void>
   readOnly?: boolean
 }
 
@@ -97,9 +97,12 @@ export function PhotoLightbox({
   const handleDelete = async () => {
     if (!photo) return
     const id = photo.id
-    await api.delete(`/photos/${id}`)
-    dispatch(removePhoto(id))
-    onPhotoDeleted?.(id)
+    if (onPhotoDeleted) {
+      await onPhotoDeleted(id)
+    } else {
+      await api.delete(`/photos/${id}`)
+      dispatch(removePhoto(id))
+    }
     setDeleteOpen(false)
     if (photos.length <= 1) {
       onClose()

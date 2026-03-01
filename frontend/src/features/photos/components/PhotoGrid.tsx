@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Check, MessageSquare } from "lucide-react"
-
 import type { Photo } from "@/app/types"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -16,7 +15,7 @@ type PhotoGridProps = {
   photos: Photo[]
   isLoading?: boolean
   onPhotoClick?: (photo: Photo, index: number) => void
-  onPhotosDeleted?: (ids: string[]) => void
+  onPhotosDeleted?: (ids: string[]) => void | Promise<void>
   readOnly?: boolean
 }
 
@@ -70,11 +69,16 @@ export function PhotoGrid({
     const ids = Array.from(selectedIds)
     setIsDeleting(true)
     try {
-      await Promise.all(ids.map((id) => api.delete(`/photos/${id}`)))
-      ids.forEach((id) => dispatch(removePhoto(id)))
-      onPhotosDeleted?.(ids)
-      setSelectedIds(new Set())
-      setConfirmOpen(false)
+      if (onPhotosDeleted) {
+        await onPhotosDeleted(ids)
+        setSelectedIds(new Set())
+        setConfirmOpen(false)
+      } else {
+        await Promise.all(ids.map((id) => api.delete(`/photos/${id}`)))
+        ids.forEach((id) => dispatch(removePhoto(id)))
+        setSelectedIds(new Set())
+        setConfirmOpen(false)
+      }
     } catch {
       // Keep selection intact on error so user can retry
     } finally {

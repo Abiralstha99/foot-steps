@@ -13,11 +13,17 @@ import { PhotoGrid } from "@/features/photos/components/PhotoGrid"
 import { PhotoLightbox } from "@/features/photos/components/PhotoLightbox"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { useUpdatePhoto } from "@/features/photos/usePhotos"
+import {
+  useGetPhotosQuery,
+  useUpdateCaptionMutation,
+  useDeletePhotoMutation,
+} from "@/features/photos/api/tripPhotosApi"
+import {
+  useGetTripQuery,
+  useUpdateCoverPhotoMutation,
+  useRemoveCoverPhotoMutation,
+} from "@/features/trips/tripsApi"
 import api from "@/lib/api"
-import type { Photo, Trip } from "@/app/types"
-
-type TripWithPhotos = Trip & { photos: Photo[] }
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (typeof err === "object" && err !== null) {
@@ -38,27 +44,44 @@ export function TripDetailPage() {
   const [shareOpen, setShareOpen] = useState(false)
   const [coverDialogOpen, setCoverDialogOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
-  const [trip, setTrip] = useState<TripWithPhotos | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverProgress, setCoverProgress] = useState(0)
   const [coverError, setCoverError] = useState<string | null>(null)
   const [isSavingCover, setIsSavingCover] = useState(false)
-  const { updatePhotoCaption } = useUpdatePhoto()
+
+  const { data: photos = [], refetch: refetchPhotos } = useGetPhotosQuery(tripId ?? "", {
+    skip: !tripId,
+  })
+  const [updateCaption] = useUpdateCaptionMutation()
+  const [deletePhotoMutation] = useDeletePhotoMutation()
+
+  const {
+    data: trip,
+    isLoading: isTripLoading,
+    error: tripError,
+    refetch: refetchTrip,
+  } = useGetTripQuery(tripId ?? "", {
+    skip: !tripId,
+  })
+
+  const [updateCoverPhoto] = useUpdateCoverPhotoMutation()
+  const [removeCoverPhoto] = useRemoveCoverPhotoMutation()
 
   const handleUpdateCaption = async (photoId: string, caption: string) => {
-    await updatePhotoCaption(photoId, caption)
-    setTrip((prev) =>
-      prev
-        ? { ...prev, photos: prev.photos.map((p) => (p.id === photoId ? { ...p, caption } : p)) }
-        : prev
-    )
+    if (!tripId) return
+    await updateCaption({ photoId, caption, tripId }).unwrap()
   }
 
-  const refreshTrip = async (id: string) => {
-    const res = await api.get(`/trips/${id}`)
-    setTrip(res.data as TripWithPhotos)
+  const handlePhotosDeleted = async (ids: string[]) => {
+    if (!tripId) return
+    for (const photoId of ids) {
+      await deletePhotoMutation({ photoId, tripId }).unwrap()
+    }
+  }
+
+  const handlePhotoDeleted = async (id: string) => {
+    if (!tripId) return
+    await deletePhotoMutation({ photoId: id, tripId }).unwrap()
   }
 
   const openCoverDialog = () => {
@@ -69,7 +92,7 @@ export function TripDetailPage() {
   }
 
   const handleSaveCover = async () => {
-    if (!trip) return
+    if (!trip || !tripId) return
     if (!coverFile) {
       setCoverError("Please select a photo.")
       return
@@ -89,15 +112,12 @@ export function TripDetailPage() {
         },
       })
 
-      const photoId = uploadRes.data?.id
-      const coverUrl = uploadRes.data?.url
+      const photoId = uploadRes.data?.id as string | undefined
       if (!photoId) throw new Error("No photo ID returned from upload")
 
-      await api.patch(`/trips/${trip.id}`, { coverPhotoId: photoId })
-      setTrip((prev) =>
-        prev ? { ...prev, coverUrl: coverUrl ?? prev.coverUrl ?? null } : prev
-      )
+      await updateCoverPhoto({ id: tripId, coverPhotoId: photoId }).unwrap()
       setCoverDialogOpen(false)
+      await refetchPhotos()
     } catch (err: unknown) {
       setCoverError(extractErrorMessage(err, "Failed to update cover photo"))
     } finally {
@@ -106,12 +126,11 @@ export function TripDetailPage() {
   }
 
   const handleRemoveCover = async () => {
-    if (!trip) return
+    if (!tripId) return
     setIsSavingCover(true)
     setCoverError(null)
     try {
-      await api.patch(`/trips/${trip.id}`, { coverPhotoUrl: null })
-      setTrip((prev) => (prev ? { ...prev, coverUrl: null } : prev))
+      await removeCoverPhoto({ id: tripId }).unwrap()
       setCoverDialogOpen(false)
     } catch (err: unknown) {
       setCoverError(extractErrorMessage(err, "Failed to remove cover photo"))
@@ -131,32 +150,10 @@ export function TripDetailPage() {
     }
   }, [coverPreviewSrc])
 
-  useEffect(() => {
-    if (!tripId) return
-    let cancelled = false
+  const loadErrorMessage =
+    tripError != null ? extractErrorMessage(tripError as unknown, "Failed to load trip") : null
 
-    const fetchTrip = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const res = await api.get(`/trips/${tripId}`)
-        if (cancelled) return
-        setTrip(res.data as TripWithPhotos)
-      } catch (err: unknown) {
-        if (cancelled) return
-        setError(extractErrorMessage(err, "Failed to load trip"))
-        setTrip(null)
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-    fetchTrip()
-    return () => {
-      cancelled = true
-    }
-  }, [tripId])
-
-  if (isLoading) {
+  if (isTripLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
         <Loader2 className="size-8 animate-spin text-accent" />
@@ -164,12 +161,12 @@ export function TripDetailPage() {
     )
   }
 
-  if (error || !trip) {
+  if (!trip || tripError) {
     return (
       <div className="py-12">
         <h1 className="font-display text-heading text-text-primary">Trip not found</h1>
         <p className="mt-2 text-body text-text-muted">
-          {error ? `Error: ${error}` : "We couldn't find that trip."}
+          {loadErrorMessage ? `Error: ${loadErrorMessage}` : "We couldn't find that trip."}
         </p>
       </div>
     )
@@ -181,7 +178,7 @@ export function TripDetailPage() {
       <div className="-mx-6 -mt-8">
         <TripHeroBanner
           trip={trip}
-          photoCount={trip.photos?.length}
+          photoCount={photos.length}
           onEdit={() => setEditOpen(true)}
           onShare={() => setShareOpen(true)}
           onChangeCover={openCoverDialog}
@@ -197,30 +194,22 @@ export function TripDetailPage() {
       <div className="mt-6">
         {activeTab === "grid" && (
           <PhotoGrid
-            photos={trip.photos ?? []}
+            photos={photos}
             isLoading={false}
             onPhotoClick={(_, index) => setLightboxIndex(index)}
-            onPhotosDeleted={(ids) =>
-              setTrip((prev) =>
-                prev
-                  ? { ...prev, photos: prev.photos.filter((p) => !ids.includes(p.id)) }
-                  : prev
-              )
-            }
+            onPhotosDeleted={handlePhotosDeleted}
           />
         )}
         {activeTab === "timeline" && (
           <TripTimeline
             tripId={tripId ?? undefined}
             onPhotoClick={(photo) => {
-              const idx = trip.photos.findIndex((p) => p.id === photo.id)
+              const idx = photos.findIndex((p) => p.id === photo.id)
               setLightboxIndex(idx >= 0 ? idx : 0)
             }}
           />
         )}
-        {activeTab === "map" && (
-          <TripMapView photos={trip.photos ?? []} />
-        )}
+        {activeTab === "map" && <TripMapView photos={photos} />}
       </div>
 
       {/* Upload FAB */}
@@ -228,16 +217,12 @@ export function TripDetailPage() {
 
       {/* Photo lightbox */}
       <PhotoLightbox
-        photos={trip.photos ?? []}
+        photos={photos}
         initialIndex={lightboxIndex >= 0 ? lightboxIndex : 0}
         open={lightboxIndex >= 0}
         onClose={() => setLightboxIndex(-1)}
         onUpdateCaption={handleUpdateCaption}
-        onPhotoDeleted={(id) =>
-          setTrip((prev) =>
-            prev ? { ...prev, photos: prev.photos.filter((p) => p.id !== id) } : prev
-          )
-        }
+        onPhotoDeleted={handlePhotoDeleted}
       />
 
       {/* Upload form */}
@@ -246,31 +231,31 @@ export function TripDetailPage() {
           tripId={tripId}
           onClose={() => setUploadOpen(false)}
           onUploadComplete={async () => {
-            await refreshTrip(tripId)
+            await refetchPhotos()
             setUploadOpen(false)
           }}
         />
       )}
 
       {/* Edit trip modal */}
-      {editOpen && (
+      {editOpen && trip && (
         <EditTripModal
           trip={trip}
           open={editOpen}
           onOpenChange={setEditOpen}
-          onSuccess={() => tripId && refreshTrip(tripId)}
+          onSuccess={() => refetchTrip()}
         />
       )}
 
       {/* Share dialog */}
-      {shareOpen && (
+      {shareOpen && trip && (
         <ShareDialog
           trip={trip}
           open={shareOpen}
           onOpenChange={setShareOpen}
-          onShareTokenChange={(token) =>
-            setTrip((prev) => (prev ? { ...prev, shareToken: token } : prev))
-          }
+          onShareTokenChange={async () => {
+            await refetchTrip()
+          }}
         />
       )}
 
@@ -322,7 +307,9 @@ export function TripDetailPage() {
             )}
 
             {coverError && (
-              <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-400">{coverError}</p>
+              <p className="rounded bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                {coverError}
+              </p>
             )}
 
             <div className="flex justify-end gap-2 border-t border-border-token pt-4">
@@ -333,10 +320,7 @@ export function TripDetailPage() {
               >
                 Remove
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setCoverDialogOpen(false)}
-              >
+              <Button variant="ghost" onClick={() => setCoverDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleSaveCover} disabled={isSavingCover}>
@@ -349,3 +333,4 @@ export function TripDetailPage() {
     </div>
   )
 }
+
