@@ -26,17 +26,15 @@ async function getAllPhotos(req: Request, res: Response) {
       },
     });
 
-    const photosWithFreshUrls = await Promise.all(
+    const photosWithDisplayUrls = await Promise.all(
       photos.map(async (photo) => {
-        const viewUrl = await getPresignedUrl(photo.s3Key);
-        return {
-          ...photo,
-          viewUrl,
-        };
+        const url = await getPresignedUrl(photo.s3Key);
+        const { s3Key: _, ...rest } = photo;
+        return { ...rest, url };
       }),
     );
 
-    return res.json(photosWithFreshUrls);
+    return res.json(photosWithDisplayUrls);
   } catch (error) {
     console.error("Error fetching photos:", error);
     return res.status(500).json({
@@ -77,11 +75,11 @@ export const updatePhoto = async (req: Request, res: Response) => {
 
     const updatedPhoto = await prisma.photo.update({
       where: { id: photoId },
-      data: {
-        caption: caption, // Update the caption
-      },
+      data: { caption: caption ?? null },
     });
-    return res.status(200).json(updatedPhoto);
+    const url = await getPresignedUrl(updatedPhoto.s3Key);
+    const { s3Key: _, ...rest } = updatedPhoto;
+    return res.status(200).json({ ...rest, url });
   } catch (error) {
     console.error("Error updating photo:", error);
     return res.status(500).json({ message: "Failed to update photo" });
@@ -106,12 +104,9 @@ async function getPhotoById(req: Request, res: Response) {
     if (photo.trip.userId !== userId) {
       return res.status(403).json({ message: "Forbidden" });
     }
-    const viewUrl = await getPresignedUrl(photo.s3Key);
-    const { trip, ...photoWithoutTrip } = photo;
-    return res.json({
-      ...photoWithoutTrip,
-      viewUrl,
-    });
+    const url = await getPresignedUrl(photo.s3Key);
+    const { trip, s3Key: _, ...photoWithoutTrip } = photo;
+    return res.json({ ...photoWithoutTrip, url });
   } catch (error) {
     console.error("Error fetching photo:", error);
     return res.status(500).json({ message: "Failed to fetch photo" });
@@ -184,8 +179,9 @@ async function createPhoto(req: Request, res: Response) {
     },
   });
 
-  const viewUrl = await getPresignedUrl(key);
-  return res.status(201).json({ ...photo, viewUrl, url: viewUrl });
+  const url = await getPresignedUrl(key);
+  const { s3Key: _, ...photoWithoutKey } = photo;
+  return res.status(201).json({ ...photoWithoutKey, url });
 }
 
 async function handlePhotoUpload(req: Request, res: Response, next: NextFunction) {

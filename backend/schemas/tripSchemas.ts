@@ -23,6 +23,7 @@ const updateTripBody = z.object({
     description: z.string().optional(),
     startDate: z.iso.datetime().optional(),
     endDate: z.iso.datetime().optional(),
+    coverPhotoId: z.uuid("coverPhotoId must be a valid UUID").optional(),
     coverPhotoUrl: z
         .url()
         .refine(u => /^https?:\/\//i.test(u), { message: "Only http/https URLs are allowed" })

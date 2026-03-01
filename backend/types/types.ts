@@ -1,11 +1,8 @@
-
 export interface Photo {
   id: string;
   tripId: string;
+  /** Display-ready signed URL. Never an S3 key. */
   url?: string | null;
-  // Fresh, short-lived signed URL returned by the API for viewing.
-  // Prefer this over `url` when present.
-  viewUrl?: string | null;
   takenAt?: string | null;
   latitude?: number | null;
   longitude?: number | null;

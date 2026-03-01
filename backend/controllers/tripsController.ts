@@ -7,19 +7,20 @@ async function getTrip(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
     const trips = await prisma.trip.findMany({ where: { userId } });
-    // `coverPhotoUrl` may be either a real URL (legacy/manual) or an S3 key.
-    // When it's an S3 key, return a fresh signed URL via `coverViewUrl`.
-    const tripsWithCover = await Promise.all(
+    const tripsWithCoverUrl = await Promise.all(
       trips.map(async (trip) => {
         const cover = trip.coverPhotoUrl;
-        if (!cover) return { ...trip, coverViewUrl: null };
-        if (/^https?:\/\//i.test(cover)) return { ...trip, coverViewUrl: cover };
-        const coverViewUrl = await getPresignedUrl(cover);
-        return { ...trip, coverViewUrl };
+        const coverUrl = !cover
+          ? null
+          : /^https?:\/\//i.test(cover)
+            ? cover
+            : await getPresignedUrl(cover);
+        const { coverPhotoUrl: _, ...rest } = trip;
+        return { ...rest, coverUrl };
       }),
     );
 
-    return res.json(tripsWithCover);
+    return res.json(tripsWithCoverUrl);
   } catch (error) {
     console.error("Error fetching trips:", error);
     return res.status(500).json({ message: "Failed to fetch trips" });
@@ -41,7 +42,11 @@ async function createTrip(req: Request, res: Response) {
         ...(coverPhotoUrl != null && coverPhotoUrl !== "" && { coverPhotoUrl }),
       },
     });
-    return res.status(201).json(trip);
+    const cover = trip.coverPhotoUrl;
+    const coverUrl =
+      !cover ? null : /^https?:\/\//i.test(cover) ? cover : await getPresignedUrl(cover);
+    const { coverPhotoUrl: _c, ...rest } = trip;
+    return res.status(201).json({ ...rest, coverUrl });
   } catch (error: any) {
     console.error("Error creating trip:", error);
 
@@ -76,28 +81,24 @@ async function getTripById(req: Request, res: Response) {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Generate fresh presigned URLs using stored s3Key (do not persist presigned URLs)
-    const photosWithFreshUrls = await Promise.all(
+    const photosWithUrl = await Promise.all(
       prismaTrip.photos.map(async (photo) => {
-        const viewUrl = await getPresignedUrl(photo.s3Key);
-        return {
-          ...photo,
-          viewUrl,
-        };
+        const url = await getPresignedUrl(photo.s3Key);
+        const { s3Key: _, ...rest } = photo;
+        return { ...rest, url };
       }),
     );
 
     const cover = prismaTrip.coverPhotoUrl;
-    const coverViewUrl =
+    const coverUrl =
       !cover ? null : /^https?:\/\//i.test(cover) ? cover : await getPresignedUrl(cover);
 
-    const tripWithFreshUrls = {
-      ...prismaTrip,
-      coverViewUrl,
-      photos: photosWithFreshUrls,
-    };
-
-    return res.json(tripWithFreshUrls);
+    const { coverPhotoUrl: __, ...tripRest } = prismaTrip;
+    return res.json({
+      ...tripRest,
+      coverUrl,
+      photos: photosWithUrl,
+    });
   } catch (error) {
     console.error("Error fetching trip:", error);
     return res.status(500).json({ message: "Failed to fetch trip" });
@@ -108,11 +109,11 @@ async function updateTripById(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
     const { id } = req.params as { id: string };
-    const { name, description, startDate, endDate, coverPhotoUrl } = req.body;
+    const { name, description, startDate, endDate, coverPhotoId, coverPhotoUrl } = req.body;
 
     const existingTrip = await prisma.trip.findUnique({
       where: { id },
-      include: { photos: true }
+      include: { photos: true },
     });
 
     if (!existingTrip) {
@@ -135,19 +136,46 @@ async function updateTripById(req: Request, res: Response) {
       });
     }
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (startDate !== undefined) updateData.startDate = new Date(startDate);
     if (endDate !== undefined) updateData.endDate = new Date(endDate);
-    if (coverPhotoUrl !== undefined) updateData.coverPhotoUrl = coverPhotoUrl;
+
+    if (coverPhotoId !== undefined) {
+      const photo = existingTrip.photos.find((p) => p.id === coverPhotoId);
+      if (!photo) {
+        return res.status(400).json({ message: "Photo not found or does not belong to this trip" });
+      }
+      updateData.coverPhotoUrl = photo.s3Key;
+    } else if (coverPhotoUrl !== undefined) {
+      updateData.coverPhotoUrl = coverPhotoUrl === "" ? null : coverPhotoUrl;
+    }
 
     const trip = await prisma.trip.update({
       where: { id },
       data: updateData,
+      include: { photos: true },
     });
 
-    return res.json(trip);
+    const photosWithUrl = await Promise.all(
+      trip.photos.map(async (photo) => {
+        const url = await getPresignedUrl(photo.s3Key);
+        const { s3Key: _s, ...rest } = photo;
+        return { ...rest, url };
+      }),
+    );
+
+    const cover = trip.coverPhotoUrl;
+    const coverUrl =
+      !cover ? null : /^https?:\/\//i.test(cover) ? cover : await getPresignedUrl(cover);
+
+    const { coverPhotoUrl: _c, ...tripRest } = trip;
+    return res.json({
+      ...tripRest,
+      coverUrl,
+      photos: photosWithUrl,
+    });
   } catch (error) {
     console.error("Error updating trip:", error);
     return res.status(500).json({ message: "Failed to update trip" });
@@ -230,12 +258,20 @@ async function getPhotosByGrouped(req: Request, res: Response) {
     if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     const photos: Photo[] = await Promise.all(
-      trip.photos.map(async (p) => ({
-        ...p,
-        takenAt: p.takenAt ? p.takenAt.toISOString() : null,
-        createdAt: p.createdAt.toISOString(), // convert Date -> string
-        viewUrl: await getPresignedUrl(p.s3Key),
-      }))
+      trip.photos.map(async (p) => {
+        const url = await getPresignedUrl(p.s3Key);
+        return {
+          id: p.id,
+          tripId: p.tripId,
+          url,
+          takenAt: p.takenAt ? p.takenAt.toISOString() : null,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          aiTags: p.aiTags,
+          caption: p.caption,
+          createdAt: p.createdAt.toISOString(),
+        };
+      })
     );
 
     const result: DayGroup[] = groupPhotosByDay(photos);

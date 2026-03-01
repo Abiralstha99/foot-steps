@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { getPresignedUrl } from "../services/s3.service";
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
@@ -78,11 +79,12 @@ export const getOnThisDay = async (req: Request, res: Response) => {
     if (matchingPhoto) {
       const yearsAgo =
         currentYear - new Date(matchingPhoto.takenAt!).getFullYear();
+      const url = await getPresignedUrl(matchingPhoto.s3Key);
 
       res.json({
         photo: {
           id: matchingPhoto.id,
-          url: matchingPhoto.url,
+          url,
           takenAt: matchingPhoto.takenAt,
           tripName: matchingPhoto.trip.name,
           tripLocation: matchingPhoto.trip.description,
@@ -111,10 +113,11 @@ export const getOnThisDay = async (req: Request, res: Response) => {
       });
 
       if (randomPhoto) {
+        const url = await getPresignedUrl(randomPhoto.s3Key);
         res.json({
           photo: {
             id: randomPhoto.id,
-            url: randomPhoto.url,
+            url,
             takenAt: randomPhoto.takenAt,
             tripName: randomPhoto.trip.name,
             tripLocation: randomPhoto.trip.description,
@@ -218,6 +221,17 @@ export const getRecentActivity = async (req: Request, res: Response) => {
       if (byTripId.size >= 3) break;
     }
 
+    const toTripWithCoverUrl = async (trip: { coverPhotoUrl: string | null; [k: string]: unknown }) => {
+      const cover = trip.coverPhotoUrl;
+      const coverUrl = !cover
+        ? null
+        : /^https?:\/\//i.test(cover)
+          ? cover
+          : await getPresignedUrl(cover);
+      const { coverPhotoUrl: _, ...rest } = trip;
+      return { ...rest, coverUrl };
+    };
+
     // Fallback if no photos yet: use most recently created trips.
     if (byTripId.size === 0) {
       const recentTrips = await prisma.trip.findMany({
@@ -235,23 +249,26 @@ export const getRecentActivity = async (req: Request, res: Response) => {
         },
       });
 
+      const tripsWithCover = await Promise.all(recentTrips.map(toTripWithCoverUrl));
       return res.json(
-        recentTrips.map((trip) => ({
-          trip,
-          lastActivityAt: trip.createdAt,
+        tripsWithCover.map((trip, i) => ({
+          trip: { ...trip, location: trip.description },
+          lastActivityAt: recentTrips[i].createdAt,
           message: `Continue editing ${trip.name}`,
         })),
       );
     }
 
+    const entries = Array.from(byTripId.values());
+    const tripsWithCover = await Promise.all(entries.map(({ trip }) => toTripWithCoverUrl(trip)));
     return res.json(
-      Array.from(byTripId.values()).map(({ trip, lastActivityAt }) => ({
+      entries.map(({ lastActivityAt }, i) => ({
         trip: {
-          ...trip,
-          location: trip.description,
+          ...tripsWithCover[i],
+          location: tripsWithCover[i].description,
         },
         lastActivityAt,
-        message: `Continue editing ${trip.name}`,
+        message: `Continue editing ${tripsWithCover[i].name}`,
       })),
     );
   } catch (error) {
