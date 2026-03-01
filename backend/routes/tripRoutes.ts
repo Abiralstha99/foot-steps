@@ -1,6 +1,6 @@
 import express from "express";
-import { getTrip, createTrip, getTripById, getTripPhotos, updateTripById, deleteTripById, getPhotosByGrouped } from "../controllers/tripsController";
-import { createPhoto, handlePhotoUpload } from "../controllers/photoController";
+import { getTrip, createTrip, getTripById, getTripPhotos, updateTripById, deleteTripById } from "../controllers/tripsController";
+import { createPhoto, handlePhotoUpload, getPhotosByGrouped } from "../controllers/photoController";
 import { clerkAuth, syncUser } from "../middleware/auth";
 import { validate, validateFile } from "../middleware/validate";
 import { createTripSchema, updateTripSchema, tripParamSchema, tripIdParamSchema } from "../schemas/tripSchemas";
