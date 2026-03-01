@@ -65,14 +65,13 @@ async function createTrip(req: Request, res: Response) {
   }
 }
 
-// Generate new preSignedURL 
+// GET /trips/:id — trip without photos (use GET /trips/:id/photos for photos)
 async function getTripById(req: Request, res: Response) {
   try {
     const userId = req.auth().userId;
     const id = req.params.id as string;
     const prismaTrip = await prisma.trip.findUnique({
       where: { id },
-      include: { photos: true },
     });
     if (!prismaTrip) {
       return res.status(404).json({ message: "Trip not found" });
@@ -80,14 +79,6 @@ async function getTripById(req: Request, res: Response) {
     if (prismaTrip.userId !== userId) {
       return res.status(403).json({ message: "Forbidden" });
     }
-
-    const photosWithUrl = await Promise.all(
-      prismaTrip.photos.map(async (photo) => {
-        const url = await getPresignedUrl(photo.s3Key);
-        const { s3Key: _, ...rest } = photo;
-        return { ...rest, url };
-      }),
-    );
 
     const cover = prismaTrip.coverPhotoUrl;
     const coverUrl =
@@ -97,13 +88,41 @@ async function getTripById(req: Request, res: Response) {
     return res.json({
       ...tripRest,
       coverUrl,
-      photos: photosWithUrl,
     });
   } catch (error) {
     console.error("Error fetching trip:", error);
     return res.status(500).json({ message: "Failed to fetch trip" });
   }
-};
+}
+
+// GET /trips/:id/photos — photos for a trip (display-ready URLs)
+async function getTripPhotos(req: Request, res: Response) {
+  try {
+    const userId = req.auth().userId;
+    const id = req.params.id as string;
+
+    const trip = await prisma.trip.findFirst({
+      where: { id, userId },
+      include: { photos: true },
+    });
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    const photosWithUrl = await Promise.all(
+      trip.photos.map(async (photo) => {
+        const url = await getPresignedUrl(photo.s3Key);
+        const { s3Key: _, ...rest } = photo;
+        return { ...rest, url };
+      }),
+    );
+
+    return res.json(photosWithUrl);
+  } catch (error) {
+    console.error("Error fetching trip photos:", error);
+    return res.status(500).json({ message: "Failed to fetch photos" });
+  }
+}
 
 async function updateTripById(req: Request, res: Response) {
   try {
@@ -155,16 +174,7 @@ async function updateTripById(req: Request, res: Response) {
     const trip = await prisma.trip.update({
       where: { id },
       data: updateData,
-      include: { photos: true },
     });
-
-    const photosWithUrl = await Promise.all(
-      trip.photos.map(async (photo) => {
-        const url = await getPresignedUrl(photo.s3Key);
-        const { s3Key: _s, ...rest } = photo;
-        return { ...rest, url };
-      }),
-    );
 
     const cover = trip.coverPhotoUrl;
     const coverUrl =
@@ -174,7 +184,6 @@ async function updateTripById(req: Request, res: Response) {
     return res.json({
       ...tripRest,
       coverUrl,
-      photos: photosWithUrl,
     });
   } catch (error) {
     console.error("Error updating trip:", error);
@@ -284,4 +293,4 @@ async function getPhotosByGrouped(req: Request, res: Response) {
 }
 
 
-export { getTrip, createTrip, getTripById, updateTripById, deleteTripById, getPhotosByGrouped, groupPhotosByDay };
+export { getTrip, createTrip, getTripById, getTripPhotos, updateTripById, deleteTripById, getPhotosByGrouped, groupPhotosByDay };

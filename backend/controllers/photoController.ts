@@ -196,4 +196,29 @@ async function handlePhotoUpload(req: Request, res: Response, next: NextFunction
   });
 }
 
-export { getAllPhotos, getPhotoById, createPhoto, handlePhotoUpload };
+async function deletePhoto(req: Request, res: Response) {
+  try {
+    const photoId = req.params.photoId as string;
+    const userId = req.auth().userId;
+
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      include: { trip: { select: { userId: true } } },
+    });
+
+    if (!photo) {
+      return res.status(404).json({ message: "Photo not found" });
+    }
+    if (photo.trip.userId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    await prisma.photo.delete({ where: { id: photoId } });
+    return res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting photo:", error);
+    return res.status(500).json({ message: "Failed to delete photo" });
+  }
+}
+
+export { getAllPhotos, getPhotoById, createPhoto, handlePhotoUpload, deletePhoto, updatePhoto };
