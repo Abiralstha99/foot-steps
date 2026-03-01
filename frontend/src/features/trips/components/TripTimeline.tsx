@@ -1,5 +1,4 @@
 import { Loader2, MessageSquare } from "lucide-react"
-
 import type { Photo } from "@/app/types"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { AiTagBadge } from "@/features/photos/components/AiTagBadge"

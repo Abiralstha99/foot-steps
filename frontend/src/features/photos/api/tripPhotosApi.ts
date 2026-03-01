@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import type { Photo } from "@/app/types";
+import type { DayGroup, Photo } from "@/app/types";
 import { axiosBaseQuery } from "../../../lib/axiosBaseQuery";
 
 export const tripPhotosApi = createApi({
@@ -7,17 +7,22 @@ export const tripPhotosApi = createApi({
   baseQuery: axiosBaseQuery(),
   tagTypes: ["Photos"],
   endpoints: (build) => ({
+    getPhotosGrouped: build.query<DayGroup[], string>({
+      query: (tripId) => ({ url: `/trips/${tripId}/photos/grouped` }),
+      providesTags: (_, __, tripId) => [{ type: "Photos" as const, id: tripId }],
+    }),
+
     getPhotos: build.query<Photo[], string>({
       query: (tripId) => ({ url: `/trips/${tripId}/photos` }),
       providesTags: (result, _, tripId) =>
         result
           ? [
-              { type: "Photos" as const, id: tripId },
-              ...result.map((p) => ({
-                type: "Photos" as const,
-                id: `${tripId}-${p.id}`,
-              })),
-            ]
+            { type: "Photos" as const, id: tripId },
+            ...result.map((p) => ({
+              type: "Photos" as const,
+              id: `${tripId}-${p.id}`,
+            })),
+          ]
           : [{ type: "Photos", id: tripId }],
     }),
 
@@ -60,6 +65,7 @@ export const tripPhotosApi = createApi({
 });
 
 export const {
+  useGetPhotosGroupedQuery,
   useGetPhotosQuery,
   useUploadPhotoMutation,
   useDeletePhotoMutation,

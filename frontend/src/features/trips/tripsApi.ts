@@ -7,6 +7,7 @@ export const tripsApi = createApi({
   baseQuery: axiosBaseQuery(),
   tagTypes: ["Trips"],
   endpoints: (build) => ({
+
     getTrips: build.query<Trip[], void>({
       query: () => ({ url: "/trips" }),
       providesTags: (result) =>
@@ -29,7 +30,8 @@ export const tripsApi = createApi({
         method: "POST",
         data: body,
       }),
-      invalidatesTags: (_result, _error, _arg) => [{ type: "Trips", id: "LIST" }],
+    
+      invalidatesTags: [{ type: "Trips", id: "LIST" }],
     }),
 
     updateTrip: build.mutation<Trip, { id: string; changes: UpdateTripInput }>({
@@ -62,6 +64,8 @@ export const tripsApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "Trips", id }],
     }),
   }),
+
+  
 })
 
 export const {
