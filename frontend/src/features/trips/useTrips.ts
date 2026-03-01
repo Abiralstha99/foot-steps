@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { fetchTrips, createTrip, updateTripAsync } from "./tripsSlice";
+import { fetchTrips, createTrip, updateTripAsync, fetchPhotosGrouped } from "./tripsSlice";
 import type { CreateTripInput, UpdateTripInput, Trip } from "@/app/types";
 import type { RootState } from "@/app/store";
 
@@ -8,6 +9,11 @@ export const selectTripsLoading = (state: RootState) => state.trip.loading;
 export const selectTripsError = (state: RootState) => state.trip.error;
 export const selectTripById = (tripId: string) => (state: RootState) =>
   state.trip.trips.find((trip) => trip.id === tripId);
+export const selectGroupedPhotosByTripId = (tripId: string) => (state: RootState) =>
+  state.trip.groupedPhotosByTripId[tripId] ?? [];
+export const selectGroupedPhotosLoading = (state: RootState) =>
+  state.trip.groupedPhotosLoadingTripId;
+export const selectGroupedPhotosError = (state: RootState) => state.trip.groupedPhotosError;
 
 export const useCreateTrip = () => {
   const dispatch = useAppDispatch();
@@ -54,4 +60,29 @@ export const useTrips = () => {
   const error = useAppSelector(selectTripsError);
 
   return { trips, loading, error };
+};
+
+export const usePhotosByGrouped = (tripId: string | undefined) => {
+  const dispatch = useAppDispatch();
+  const groups = useAppSelector(
+    tripId ? selectGroupedPhotosByTripId(tripId) : () => []
+  );
+  const loading = useAppSelector(selectGroupedPhotosLoading);
+  const error = useAppSelector(selectGroupedPhotosError);
+  const isLoadingThisTrip = Boolean(tripId && loading === tripId);
+
+  const refetch = () => {
+    if (tripId) dispatch(fetchPhotosGrouped(tripId));
+  };
+
+  useEffect(() => {
+    if (tripId) dispatch(fetchPhotosGrouped(tripId));
+  }, [dispatch, tripId]);
+
+  return {
+    groups,
+    loading: isLoadingThisTrip,
+    error,
+    refetch,
+  };
 };

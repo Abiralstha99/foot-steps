@@ -9,6 +9,7 @@ export interface Trip {
   coverPhotoUrl?: string | null;
   // Fresh signed URL for viewing the cover (when coverPhotoUrl stores an S3 key).
   coverViewUrl?: string | null;
+  shareToken?: string | null;
   createdAt?: string;
   _count?: { photos: number };
 }
@@ -46,6 +47,12 @@ export interface Photo {
   caption?: string | null;
   createdAt?: string;
 }
+
+/** Group of photos for one day (from GET /trips/:id/photos/grouped). */
+export type DayGroup = {
+  label: string;
+  photos: Photo[];
+};
 
 export interface User {
   id: string;

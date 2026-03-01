@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import type { PayloadAction } from "@reduxjs/toolkit"
-import type { CreateTripInput, UpdateTripInput, Trip } from "@/app/types"
+import type { CreateTripInput, UpdateTripInput, Trip, DayGroup } from "@/app/types"
 import api from "@/lib/api"
 
 // Thunks - a special kind of function used fo async operations
@@ -34,6 +34,20 @@ export const updateTripAsync = createAsyncThunk<Trip, { id: string; changes: Upd
         }
     }
 );
+export const fetchPhotosGrouped = createAsyncThunk<
+    { tripId: string; groups: DayGroup[] },
+    string,
+    { rejectValue: string }
+>("trips/fetchPhotosGrouped", async (tripId, { rejectWithValue }) => {
+    try {
+        const response = await api.get<DayGroup[]>(`/trips/${tripId}/photos/grouped`);
+        return { tripId, groups: response.data };
+    } catch (err: any) {
+        const message =
+            err?.response?.data?.message ?? err?.message ?? "Failed to load photos by day";
+        return rejectWithValue(message);
+    }
+});
 
 export const tripSlice = createSlice({
     name: "trip",
@@ -41,6 +55,9 @@ export const tripSlice = createSlice({
         trips: [] as Trip[],
         loading: false,
         error: null as string | null,
+        groupedPhotosByTripId: {} as Record<string, DayGroup[]>,
+        groupedPhotosLoadingTripId: null as string | null,
+        groupedPhotosError: null as string | null,
     },
     reducers: {
         addTrip: (state, action: PayloadAction<Trip>) => {
@@ -103,6 +120,19 @@ export const tripSlice = createSlice({
         builder.addCase(updateTripAsync.rejected, (state, action) => {
             state.loading = false;
             state.error = (action.payload as string) ?? action.error.message ?? "Failed to update trip";
+        });
+        builder.addCase(fetchPhotosGrouped.pending, (state, action) => {
+            state.groupedPhotosLoadingTripId = action.meta.arg;
+            state.groupedPhotosError = null;
+        });
+        builder.addCase(fetchPhotosGrouped.fulfilled, (state, action) => {
+            state.groupedPhotosLoadingTripId = null;
+            state.groupedPhotosByTripId[action.payload.tripId] = action.payload.groups;
+        });
+        builder.addCase(fetchPhotosGrouped.rejected, (state, action) => {
+            state.groupedPhotosLoadingTripId = null;
+            state.groupedPhotosError =
+                (action.payload as string) ?? action.error.message ?? "Failed to load photos by day";
         });
     },
 })
