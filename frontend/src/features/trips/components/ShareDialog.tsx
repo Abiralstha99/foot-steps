@@ -1,17 +1,17 @@
-import { useState } from "react"
-import { Check, Copy, Link, Loader2 } from "lucide-react"
+import { useState } from "react";
+import { Check, Copy, Link, Loader2 } from "lucide-react";
 
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import api from "@/lib/api"
-import type { Trip } from "@/app/types"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+import type { Trip } from "@/app/types";
 
 type ShareDialogProps = {
-  trip: Trip
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onShareTokenChange?: (token: string | null) => void
-}
+  trip: Trip;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onShareTokenChange?: (token: string | null) => void;
+};
 
 export function ShareDialog({
   trip,
@@ -19,42 +19,46 @@ export function ShareDialog({
   onOpenChange,
   onShareTokenChange,
 }: ShareDialogProps) {
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isRevoking, setIsRevoking] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [localToken, setLocalToken] = useState<string | null>(trip.shareToken ?? null)
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isRevoking, setIsRevoking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [localToken, setLocalToken] = useState<string | null>(
+    trip.shareToken ?? null,
+  );
 
-  const shareUrl = localToken ? `${window.location.origin}/share/${localToken}` : null
+  const shareUrl = localToken
+    ? `${window.location.origin}/share/${localToken}`
+    : null;
 
   const handleGenerate = async () => {
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
-      const res = await api.post(`/trips/${trip.id}/share`)
-      const token: string = res.data?.shareToken ?? res.data?.token
-      setLocalToken(token)
-      onShareTokenChange?.(token)
+      const res = await api.post(`/trips/${trip.id}/share`);
+      const token: string = res.data?.shareToken ?? res.data?.token;
+      setLocalToken(token);
+      onShareTokenChange?.(token);
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   const handleCopy = async () => {
-    if (!shareUrl) return
-    await navigator.clipboard.writeText(shareUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleRevoke = async () => {
-    setIsRevoking(true)
+    setIsRevoking(true);
     try {
-      await api.delete(`/trips/${trip.id}/share`)
-      setLocalToken(null)
-      onShareTokenChange?.(null)
+      await api.delete(`/trips/${trip.id}/share`);
+      setLocalToken(null);
+      onShareTokenChange?.(null);
     } finally {
-      setIsRevoking(false)
+      setIsRevoking(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,9 +73,14 @@ export function ShareDialog({
           {!localToken ? (
             <div className="space-y-3">
               <p className="text-body text-text-secondary">
-                Generate a public link anyone can use to view this trip — no account required.
+                Generate a public link anyone can use to view this trip — no
+                account required.
               </p>
-              <Button onClick={handleGenerate} disabled={isGenerating} className="w-full">
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="w-full"
+              >
                 {isGenerating ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
@@ -137,5 +146,5 @@ export function ShareDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

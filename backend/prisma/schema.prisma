@@ -35,18 +35,19 @@ model Trip {
   coverPhotoUrl String?
   createdAt     DateTime @default(now())
   photos        Photo[]
+  shareToken    String?  @unique
 }
 
 model Photo {
-  id         String    @id @default(uuid())
-  tripId     String
-  trip       Trip      @relation(fields: [tripId], references: [id])
-  s3Key String // added a new storageKey to store the file name in the bucket
-  url        String?
-  takenAt    DateTime? // EXIF date
-  latitude   Float? // EXIF GPS
-  longitude  Float? // EXIF GPS
-  aiTags     String[] // AI landmark tags
-  caption    String?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(uuid())
+  tripId    String
+  trip      Trip      @relation(fields: [tripId], references: [id])
+  s3Key     String // added a new storageKey to store the file name in the bucket
+  url       String?
+  takenAt   DateTime? // EXIF date
+  latitude  Float? // EXIF GPS
+  longitude Float? // EXIF GPS
+  aiTags    String[] // AI landmark tags
+  caption   String?
+  createdAt DateTime  @default(now())
 }
