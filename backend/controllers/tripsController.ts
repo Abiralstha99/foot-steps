@@ -295,10 +295,18 @@ async function getTripByToken(req: Request, res: Response) {
     return res.status(404).json({ message: "Trip not found" });
   }
 
+  // 2. Ask S3 to generate temporary URL for that key
+  const photosWithUrl = await Promise.all(
+    trip.photos.map(async (photo) => {
+      const url = await getPresignedUrl(photo.s3Key);
+      const { s3Key: _, ...rest } = photo;
+      return { ...rest, url };
+    }),
+  ); // expires in 1 hour
   console.log("Generated shareToken:", shareToken);
   console.log("Saving for trip id:", trip.id);
 
-  return res.json({ trip });
+  return res.json({ trip: { ...trip, photos: photosWithUrl } });
 }
 
 export {

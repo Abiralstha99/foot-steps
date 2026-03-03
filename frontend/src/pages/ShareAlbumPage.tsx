@@ -43,10 +43,10 @@ export function ShareAlbumPage() {
       setError(null);
       try {
         const res = await api.get(`/trips/share/${token}`);
-        console.log("Response data:", res.data); // ✅ log raw response
-        console.log("Photos:", res.data?.photos); // ✅ check photos exist
+        console.log("Response data:", res.data.trip); // ✅ log raw response
+        console.log("Photos:", res.data.trip.photos); // ✅ check photos exist
         if (!cancelled) {
-          setTrip(res.data as SharedTrip);
+          setTrip(res.data.trip as SharedTrip);
         }
       } catch (err: unknown) {
         console.log("Error:", err);
