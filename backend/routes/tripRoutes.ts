@@ -42,6 +42,7 @@ tripsRouter.post(
   validateFile,
   createPhoto,
 );
+tripsRouter.get("/share/:shareToken", getTripByToken);
 tripsRouter.get(
   "/:id",
   clerkAuth,
@@ -86,11 +87,4 @@ tripsRouter.post(
   tripShareById,
 );
 
-tripsRouter.get(
-  "/share/:shareToken",
-  clerkAuth,
-  syncUser,
-  validate(tripParamSchema),
-  getTripByToken,
-);
 export default tripsRouter;

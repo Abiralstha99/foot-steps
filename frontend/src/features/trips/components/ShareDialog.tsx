@@ -34,7 +34,7 @@ export function ShareDialog({
     setIsGenerating(true);
     try {
       const res = await api.post(`/trips/${trip.id}/share`);
-      const token: string = res.data?.shareToken ?? res.data?.token;
+      const token: string = res.data.shareToken;
       setLocalToken(token);
       onShareTokenChange?.(token);
     } finally {

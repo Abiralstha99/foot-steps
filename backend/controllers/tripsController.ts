@@ -274,6 +274,9 @@ async function tripShareById(req: Request, res: Response) {
     data: { shareToken },
   });
 
+  console.log("Generated shareToken:", shareToken);
+  console.log("Saving for trip id:", id);
+
   return res.json({ shareToken });
 }
 
@@ -283,11 +286,17 @@ async function getTripByToken(req: Request, res: Response) {
     where: {
       shareToken,
     },
+    include: {
+      photos: true,
+    },
   });
 
   if (!trip) {
     return res.status(404).json({ message: "Trip not found" });
   }
+
+  console.log("Generated shareToken:", shareToken);
+  console.log("Saving for trip id:", trip.id);
 
   return res.json({ trip });
 }
