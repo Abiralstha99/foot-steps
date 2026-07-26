@@ -1,5 +1,5 @@
 import { motion } from "framer-motion"
-import { Plane, MapPin, ArrowRight } from "lucide-react"
+import { Plane, MapPin, ArrowRight, Sparkles, CalendarClock } from "lucide-react"
 import {
   SignedIn,
   SignedOut,
@@ -175,7 +175,114 @@ function HeroSection() {
   )
 }
 
-// ─── Page assembly (temporary — Task 4 will add Features + CTA) ───────
+// ─── Features ────────────────────────────────────────────────
+
+const FEATURES = [
+  {
+    icon: <MapPin className="size-5" />,
+    title: "Automatic Mapping",
+    body: "Photos with GPS data appear as pins on an interactive map — browse your trip by place, not just time.",
+  },
+  {
+    icon: <Sparkles className="size-5" />,
+    title: "AI Landmark Tagging",
+    body: "Footprint recognizes landmarks, scenes, and objects automatically, adding context to every photo.",
+  },
+  {
+    icon: <CalendarClock className="size-5" />,
+    title: "Day-by-Day Timeline",
+    body: "Photos are grouped by day and ordered chronologically, so your story flows from start to finish.",
+  },
+]
+
+function FeaturesSection() {
+  return (
+    <section id="features" className="bg-white py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="mb-12">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-forest">
+            Built for storytelling
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Everything your trip deserves.
+          </h2>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.08, ease: "easeOut" }}
+              className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow duration-200 hover:shadow-md"
+            >
+              <div className="mb-4 inline-flex items-center justify-center rounded-lg bg-green-50 p-3 text-forest">
+                {f.icon}
+              </div>
+              <h3 className="font-display text-lg font-semibold text-slate-900">
+                {f.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">{f.body}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── CTA ──────────────────────────────────────────────────────
+
+function CtaSection() {
+  return (
+    <section className="bg-gradient-to-br from-green-700 via-emerald-800 to-green-950 py-24">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="mx-auto max-w-2xl px-6 text-center"
+      >
+        <h2 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          Turn your next trip into a story worth keeping.
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-green-100">
+          Free to start. Upload your first trip and see your photos become a map,
+          a timeline, and a shareable album — in minutes.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <SignedOut>
+            <SignUpButton mode="modal">
+              <Button
+                size="lg"
+                className="gap-2 bg-white text-green-900 shadow-md hover:bg-green-50"
+              >
+                Start Free
+                <ArrowRight className="size-4" />
+              </Button>
+            </SignUpButton>
+          </SignedOut>
+          <SignedIn>
+            <Button
+              size="lg"
+              asChild
+              className="gap-2 bg-white text-green-900 shadow-md hover:bg-green-50"
+            >
+              <Link to="/home">
+                Go to Dashboard
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </SignedIn>
+        </div>
+      </motion.div>
+    </section>
+  )
+}
+
+// ─── Page assembly ────────────────────────────────────────────
 
 export function LandingPage() {
   return (
@@ -183,6 +290,8 @@ export function LandingPage() {
       <LandingNav />
       <main>
         <HeroSection />
+        <FeaturesSection />
+        <CtaSection />
       </main>
     </div>
   )
