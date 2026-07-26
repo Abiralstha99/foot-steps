@@ -49,6 +49,13 @@ html {
   --color-accent-hover: var(--accent-hover);
   --color-accent-subtle: var(--accent-subtle);
 
+  /* ─── Alpine Forest Tokens (landing page) ─────────────────── */
+  --color-forest:        #15803D;
+  --color-forest-hover:  #166534;
+  --color-forest-subtle: #DCFCE7;
+  --color-forest-muted:  #166534;
+  --color-forest-border: #BBF7D0;
+
   --font-display: 'Fraunces', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
 
