@@ -19,6 +19,8 @@ const buttonVariants = cva(
           "text-text-secondary hover:bg-bg-raised hover:text-text-primary",
         destructive:
           "bg-red-500 text-white hover:bg-red-600 focus-visible:ring-red-500/50",
+        forest:
+          "bg-gradient-to-r from-green-600 via-emerald-700 to-green-900 text-white hover:from-green-700 hover:to-green-950 shadow-sm",
         icon:
           "text-text-secondary hover:bg-bg-raised hover:text-text-primary",
       },
