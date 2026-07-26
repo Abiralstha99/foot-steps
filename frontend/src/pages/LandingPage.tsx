@@ -102,7 +102,7 @@ function HeroSection() {
               variant="outline"
               size="lg"
               asChild
-              className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-slate-500/40"
             >
               <a href="#features">See Features</a>
             </Button>
@@ -122,7 +122,7 @@ function HeroSection() {
               <span className="size-2.5 rounded-full bg-red-400" />
               <span className="size-2.5 rounded-full bg-amber-400" />
               <span className="size-2.5 rounded-full bg-green-400" />
-              <span className="mx-auto rounded-full bg-slate-200 px-16 py-0.5 text-[10px] text-slate-400">
+              <span className="mx-auto rounded-full bg-slate-200 px-16 py-0.5 text-[10px] text-slate-500">
                 footprint.app/trips
               </span>
             </div>
@@ -146,7 +146,7 @@ function HeroSection() {
             {/* Trip info strip */}
             <div className="border-t border-slate-100 bg-white px-4 py-3">
               <p className="text-sm font-semibold text-slate-800">Kyoto — Evening Walk</p>
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="mt-0.5 text-xs text-slate-500">
                 Pinned to map · AI-tagged · Ready to share
               </p>
             </div>
@@ -257,7 +257,7 @@ function CtaSection() {
             <SignUpButton mode="modal">
               <Button
                 size="lg"
-                className="gap-2 bg-white text-green-900 shadow-md hover:bg-green-50"
+                className="gap-2 bg-white text-green-900 shadow-md hover:bg-green-50 focus-visible:ring-green-700/40"
               >
                 Start Free
                 <ArrowRight className="size-4" />
@@ -268,7 +268,7 @@ function CtaSection() {
             <Button
               size="lg"
               asChild
-              className="gap-2 bg-white text-green-900 shadow-md hover:bg-green-50"
+              className="gap-2 bg-white text-green-900 shadow-md hover:bg-green-50 focus-visible:ring-green-700/40"
             >
               <Link to="/home">
                 Go to Dashboard
