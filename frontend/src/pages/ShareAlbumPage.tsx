@@ -1,76 +1,81 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react"
+import { Link, useParams } from "react-router-dom"
+import { Loader2 } from "lucide-react"
 
-import { TripHeroBanner } from "@/features/trips/components/TripHeroBanner";
+import { TripHeroBanner } from "@/features/trips/components/TripHeroBanner"
 import {
   TripTabBar,
   type TripTab,
-} from "@/features/trips/components/TripTabBar";
-import { TripMapView } from "@/features/trips/components/TripMapView";
-import { TripTimeline } from "@/features/trips/components/TripTimeline";
-import { PhotoGrid } from "@/features/photos/components/PhotoGrid";
-import { PhotoLightbox } from "@/features/photos/components/PhotoLightbox";
-import { SharedAlbumFooter } from "@/components/SharedAlbumFooter";
-import api from "@/lib/api";
-import type { Photo, Trip } from "@/app/types";
+} from "@/features/trips/components/TripTabBar"
+import { TripMapView } from "@/features/trips/components/TripMapView"
+import { TripTimeline } from "@/features/trips/components/TripTimeline"
+import { PhotoGrid } from "@/features/photos/components/PhotoGrid"
+import { PhotoLightbox } from "@/features/photos/components/PhotoLightbox"
+import { SharedAlbumFooter } from "@/components/SharedAlbumFooter"
+import api from "@/lib/api"
+import type { Photo, Trip } from "@/app/types"
 
-type SharedTrip = Trip & { photos: Photo[] };
+type SharedTrip = Trip & { photos: Photo[] }
+
+const ALBUM_UNAVAILABLE = "This album is no longer available."
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (typeof err === "object" && err !== null) {
-    const msg = (err as { response?: { data?: { message?: string } } }).response
-      ?.data?.message;
-    if (typeof msg === "string") return msg;
+    const responseMsg = (err as { response?: { data?: { message?: string } } })
+      .response?.data?.message
+    if (typeof responseMsg === "string") return responseMsg
+    const message = (err as { message?: string }).message
+    if (typeof message === "string") return message
   }
-  return fallback;
+  return fallback
 }
 
 export function ShareAlbumPage() {
-  const { token } = useParams<{ token: string }>();
-  const [activeTab, setActiveTab] = useState<TripTab>("grid");
-  const [lightboxIndex, setLightboxIndex] = useState(-1);
-  const [trip, setTrip] = useState<SharedTrip | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { token } = useParams<{ token: string }>()
+  const [activeTab, setActiveTab] = useState<TripTab>("grid")
+  const [lightboxIndex, setLightboxIndex] = useState(-1)
+  const [trip, setTrip] = useState<SharedTrip | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
+    if (!token) {
+      setIsLoading(false)
+      setError(ALBUM_UNAVAILABLE)
+      return
+    }
+
+    let cancelled = false
 
     const fetchAlbum = async () => {
-      setIsLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       try {
-        const res = await api.get(`/trips/share/${token}`);
-        console.log("Response data:", res.data.trip); // ✅ log raw response
-        console.log("Photos:", res.data.trip.photos); // ✅ check photos exist
+        const res = await api.get(`/trips/share/${token}`)
         if (!cancelled) {
-          setTrip(res.data.trip as SharedTrip);
+          setTrip(res.data.trip as SharedTrip)
         }
-      } catch (err: unknown) {
-        console.log("Error:", err);
-        if (!cancelled)
-          setError(
-            extractErrorMessage(err, "This album is no longer available."),
-          );
+      } catch (err) {
+        if (!cancelled) {
+          setError(extractErrorMessage(err, ALBUM_UNAVAILABLE))
+        }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) setIsLoading(false)
       }
-    };
+    }
 
-    fetchAlbum();
+    void fetchAlbum()
     return () => {
-      cancelled = true;
-    };
-  }, [token]);
+      cancelled = true
+    }
+  }, [token])
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-bg-base">
         <Loader2 className="size-8 animate-spin text-accent" />
       </div>
-    );
+    )
   }
 
   if (error || !trip) {
@@ -80,28 +85,33 @@ export function ShareAlbumPage() {
           Album not found
         </h1>
         <p className="text-body text-text-muted">
-          {error ?? "This album is no longer available."}
+          {error ?? ALBUM_UNAVAILABLE}
         </p>
-        <a href="/" className="text-small text-accent hover:underline">
+        <Link to="/" className="text-small text-accent hover:underline">
           Go home
-        </a>
+        </Link>
       </div>
-    );
+    )
+  }
+
+  const photos = trip.photos ?? []
+
+  const openLightboxAt = (photoId: string) => {
+    const photoIndex = photos.findIndex((photo) => photo.id === photoId)
+    setLightboxIndex(photoIndex >= 0 ? photoIndex : 0)
   }
 
   return (
     <div className="min-h-screen bg-bg-base">
-      {/* Hero — full bleed, no edit/share/cover controls */}
-      <TripHeroBanner trip={trip} photoCount={trip.photos?.length} />
+      <TripHeroBanner trip={trip} photoCount={photos.length} />
 
-      {/* Tab bar + content in a centered container */}
       <div className="mx-auto max-w-screen-xl">
         <TripTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="mt-6 px-6 pb-6">
           {activeTab === "grid" && (
             <PhotoGrid
-              photos={trip.photos ?? []}
+              photos={photos}
               isLoading={false}
               onPhotoClick={(_, index) => setLightboxIndex(index)}
               readOnly
@@ -109,21 +119,16 @@ export function ShareAlbumPage() {
           )}
           {activeTab === "timeline" && (
             <TripTimeline
-              photos={trip.photos ?? []}
-              onPhotoClick={(photo) => {
-                const idx =
-                  trip.photos?.findIndex((p) => p.id === photo.id) ?? -1;
-                setLightboxIndex(idx >= 0 ? idx : 0);
-              }}
+              photos={photos}
+              onPhotoClick={(photo) => openLightboxAt(photo.id)}
             />
           )}
-          {activeTab === "map" && <TripMapView photos={trip.photos ?? []} />}
+          {activeTab === "map" && <TripMapView photos={photos} />}
         </div>
       </div>
 
-      {/* Lightbox — read-only: captions visible but no edit or delete */}
       <PhotoLightbox
-        photos={trip.photos ?? []}
+        photos={photos}
         initialIndex={lightboxIndex >= 0 ? lightboxIndex : 0}
         open={lightboxIndex >= 0}
         onClose={() => setLightboxIndex(-1)}
@@ -132,5 +137,5 @@ export function ShareAlbumPage() {
 
       <SharedAlbumFooter />
     </div>
-  );
+  )
 }

@@ -36,7 +36,7 @@ export const uploadFile = async (
   originalFilename: string,
 ): Promise<string> => {
   const key = `users/${userId}/trips/${tripId}/photos/${photoId}-${originalFilename}`;
-
+  
   await s3Client.send(
     new PutObjectCommand({
       Bucket: bucket,
